@@ -13,6 +13,8 @@ from typing import Literal
 import httpx
 from openai import AsyncOpenAI, APIError, APIConnectionError, RateLimitError
 
+from .rate_limiter import RateLimiter, RateLimiterAware, RateLimitConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -158,13 +160,15 @@ class OllamaClient(LLMClient):
         await self.close()
 
 
-class CloudLLMClient(LLMClient):
+class CloudLLMClient(LLMClient, RateLimiterAware):
     """
     Client for cloud LLM providers.
 
     Supports multiple providers via OpenAI-compatible API:
     - Z.ai (ChatGLM)
     - OpenRouter
+
+    Includes persistent rate limiting that survives restarts.
     """
 
     def __init__(
@@ -174,6 +178,8 @@ class CloudLLMClient(LLMClient):
         api_key: str = "",
         base_url: str = "",
         timeout: float = 60.0,
+        rate_limiter: RateLimiter | None = None,
+        rate_limit_enabled: bool = True,
     ) -> None:
         """Initialize cloud LLM client.
 
@@ -183,12 +189,18 @@ class CloudLLMClient(LLMClient):
             api_key: API key for the provider.
             base_url: Base URL for the provider API.
             timeout: Request timeout in seconds.
+            rate_limiter: Optional custom rate limiter. If None, creates default.
+            rate_limit_enabled: If False, bypass rate limit checks.
         """
         self.provider = provider
         self.model = model
         self.api_key = api_key
         self.base_url = base_url
         self.timeout = timeout
+        self._rate_limit_enabled = rate_limit_enabled
+
+        # Initialize rate limiter support
+        RateLimiterAware.__init__(self, rate_limiter)
 
         # Set default base URL if not provided
         if not base_url:
@@ -234,7 +246,16 @@ class CloudLLMClient(LLMClient):
             RateLimitError: If rate limit is exceeded after retries.
         """
         if not self.api_key:
+            self._record_request_result(False, None, "no_api_key")
             raise APIError("API key is required for cloud LLM provider")
+
+        # Check local rate limit before making request
+        if self._rate_limit_enabled:
+            allowed, message = self.check_rate_limit(self.provider)
+            if not allowed:
+                logger.warning(f"Local rate limit exceeded: {message}")
+                self._record_request_result(False, None, "local_rate_limit")
+                raise RateLimitError(message)
 
         start_time = time.time()
         last_error = None
@@ -258,6 +279,9 @@ class CloudLLMClient(LLMClient):
                     f"tokens={tokens_used}, latency={latency_ms}ms"
                 )
 
+                # Record successful request
+                self._record_request_result(True, None, None)
+
                 return LLMResponse(
                     content=content,
                     model=self.model,
@@ -268,6 +292,9 @@ class CloudLLMClient(LLMClient):
 
             except RateLimitError as e:
                 last_error = e
+                # Record rate limit hit
+                self._record_request_result(False, 429, "api_rate_limit")
+
                 if attempt < max_retries:
                     # Exponential backoff
                     wait_time = 2**attempt
@@ -285,21 +312,75 @@ class CloudLLMClient(LLMClient):
 
             except APIConnectionError as e:
                 last_error = e
+                self._record_request_result(False, None, "connection_error")
                 logger.error(f"Failed to connect to {self.provider} at {self.base_url}: {e}")
                 raise
 
             except APIError as e:
                 last_error = e
+                self._record_request_result(False, None, "api_error")
                 logger.error(f"{self.provider} API error: {e}")
                 raise
 
             except Exception as e:
                 last_error = e
+                self._record_request_result(False, None, "unknown_error")
                 logger.error(f"Unexpected error in cloud LLM client: {e}")
                 raise APIError(f"Unexpected error: {e}")
 
         # Should not reach here, but just in case
         raise last_error or APIError("Unknown error in cloud LLM client")
+
+    def _record_request_result(
+        self,
+        success: bool,
+        status_code: int | None,
+        error_reason: str | None,
+    ) -> None:
+        """Record request result in rate limiter.
+
+        Args:
+            success: Whether the request succeeded.
+            status_code: HTTP status code if applicable.
+            error_reason: Error reason for logging.
+        """
+        if self._rate_limit_enabled:
+            self.record_request(
+                provider=self.provider,
+                model=self.model,
+                success=success,
+                status_code=status_code,
+            )
+
+        if error_reason and not success:
+            logger.debug(f"Request failed: {error_reason}")
+
+    def get_rate_limit_stats(self) -> dict:
+        """Get current rate limit statistics.
+
+        Returns:
+            Dictionary with rate limit statistics for this provider.
+        """
+        return self._rate_limiter.get_stats(self.provider)
+
+    def get_failed_requests(self, hours: int = 1) -> list[dict]:
+        """Get recent failed requests for debugging.
+
+        Args:
+            hours: Lookback period in hours.
+
+        Returns:
+            List of failed request records as dictionaries.
+        """
+        from .rate_limiter import RateLimitRecord
+
+        records = self._rate_limiter.get_failed_requests(self.provider, hours)
+        return [r.to_dict() for r in records]
+
+    def reset_rate_limits(self) -> None:
+        """Reset rate limit tracking for this provider."""
+        self._rate_limiter.reset(self.provider)
+        logger.info(f"Reset rate limits for provider: {self.provider}")
 
     async def close(self) -> None:
         """Close the HTTP client."""

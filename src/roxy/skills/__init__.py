@@ -10,6 +10,10 @@ from roxy.skills.base import (
     MemoryManager,
     StubMemoryManager,
     RoxySkill,
+    HookType,
+    register_hook,
+    clear_hooks,
+    get_hooks,
 )
 
 # Skill registry and permissions
@@ -28,7 +32,7 @@ from roxy.skills.productivity import (
 )
 
 # Developer skills
-from roxy.skills.dev import GitOpsSkill, ClaudeCodeSkill
+from roxy.skills.dev import GitOpsSkill, ClaudeCodeSkill, ProjectManagerSkill
 
 # System skills
 from roxy.skills.system.app_launcher import AppLauncherSkill
@@ -46,6 +50,11 @@ __all__ = [
     "MemoryManager",
     "StubMemoryManager",
     "RoxySkill",
+    # Lifecycle hooks
+    "HookType",
+    "register_hook",
+    "clear_hooks",
+    "get_hooks",
     # Registry and permissions
     "SkillRegistry",
     "get_registry",
@@ -63,6 +72,7 @@ __all__ = [
     # Developer skills
     "GitOpsSkill",
     "ClaudeCodeSkill",
+    "ProjectManagerSkill",
     # System skills
     "AppLauncherSkill",
     "FileSearchSkill",

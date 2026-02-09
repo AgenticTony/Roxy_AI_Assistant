@@ -70,7 +70,15 @@ class SpotlightSearch:
 
         # Add path restriction if specified
         if path:
-            cmd.extend(["-onlyin", path])
+            # Validate path before using it in command
+            from roxy.macos.path_validation import validate_path
+
+            try:
+                validated_path = validate_path(path, must_exist=True)
+                cmd.extend(["-onlyin", str(validated_path)])
+            except (ValueError, FileNotFoundError) as e:
+                logger.error(f"Invalid search path '{path}': {e}")
+                return []
 
         # Add limit
         cmd.extend(["-limit", str(limit)])
@@ -286,7 +294,16 @@ class SpotlightSearch:
         Returns:
             Dict with raw file metadata.
         """
-        cmd = ["mdls", path]
+        # Validate path before using it in command
+        from roxy.macos.path_validation import validate_path
+
+        try:
+            validated_path = validate_path(path, must_exist=True)
+        except (ValueError, FileNotFoundError) as e:
+            logger.error(f"Invalid path '{path}': {e}")
+            return {}
+
+        cmd = ["mdls", str(validated_path)]
 
         try:
             proc = await asyncio.create_subprocess_exec(

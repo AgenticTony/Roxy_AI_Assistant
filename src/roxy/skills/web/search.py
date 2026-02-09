@@ -12,6 +12,7 @@ import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from urllib.parse import urlencode
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
 
@@ -177,9 +178,11 @@ class WebSearchSkill(RoxySkill):
             Search results as formatted text.
         """
         try:
-            # Query SearXNG JSON API
+            # Query SearXNG JSON API with proper URL encoding to prevent command injection
+            encoded_query = urlencode({"q": query, "format": "json"})
+            url = f"http://localhost:8888/search?{encoded_query}"
             result = subprocess.run(
-                ["curl", "-s", f"http://localhost:8888/search?q={query}&format=json"],
+                ["curl", "-s", url],
                 capture_output=True,
                 text=True,
                 timeout=10,

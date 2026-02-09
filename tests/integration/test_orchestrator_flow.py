@@ -76,7 +76,7 @@ class MemorySkill(RoxySkill):
             )
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_orchestrator_full_flow(mock_config: RoxyConfig) -> None:
     """Test full flow: input → skill → response."""
     # Create skill registry and register test skills
@@ -117,7 +117,7 @@ async def test_orchestrator_full_flow(mock_config: RoxyConfig) -> None:
         await orchestrator.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_confidence_routing(mock_config: RoxyConfig) -> None:
     """Test that skills with higher confidence are selected."""
     registry = SkillRegistry()
@@ -153,7 +153,7 @@ async def test_skill_confidence_routing(mock_config: RoxyConfig) -> None:
     assert skill.name in ["high_conf", "low_conf"]  # Either is acceptable
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_conversation_history_tracking(mock_config: RoxyConfig) -> None:
     """Test that conversation history is properly tracked."""
     registry = SkillRegistry()
@@ -190,7 +190,7 @@ async def test_conversation_history_tracking(mock_config: RoxyConfig) -> None:
         await orchestrator.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_memory_integration(mock_config: RoxyConfig) -> None:
     """Test that memory operations work through orchestrator."""
     registry = SkillRegistry()
@@ -218,7 +218,7 @@ async def test_memory_integration(mock_config: RoxyConfig) -> None:
         await orchestrator.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_confidence_routing_fallback(mock_config: RoxyConfig) -> None:
     """Test that low confidence triggers cloud LLM (with privacy)."""
     registry = SkillRegistry()

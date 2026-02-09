@@ -25,6 +25,14 @@ from ..memory import MemoryManager
 from .llm_clients import OllamaClient, CloudLLMClient, LLMResponse
 from .privacy import PrivacyGateway, ConsentMode
 from .router import ConfidenceRouter
+from .protocols import (
+    PrivacyGatewayProtocol,
+    LocalLLMClientProtocol,
+    CloudLLMClientProtocol,
+    ConfidenceRouterProtocol,
+    MemoryManagerProtocol,
+    SkillRegistryProtocol,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,50 +54,74 @@ class RoxyOrchestrator:
     Uses Agno framework to manage agent, tools, and conversation flow.
     Routes requests between local and cloud LLMs based on confidence.
     Dispatches to skills when appropriate.
+
+    The orchestrator supports dependency injection for all major dependencies,
+    enabling loose coupling and easier testing. When dependencies are not
+    provided, they are created from the config for backward compatibility.
     """
 
-    def __init__(self, config: RoxyConfig, skill_registry: SkillRegistry | None = None) -> None:
-        """Initialize the orchestrator.
+    def __init__(
+        self,
+        config: RoxyConfig,
+        skill_registry: SkillRegistryProtocol | None = None,
+        local_client: LocalLLMClientProtocol | None = None,
+        cloud_client: CloudLLMClientProtocol | None = None,
+        privacy: PrivacyGatewayProtocol | None = None,
+        router: ConfidenceRouterProtocol | None = None,
+        memory: MemoryManagerProtocol | None = None,
+    ) -> None:
+        """Initialize the orchestrator with dependency injection support.
 
         Args:
             config: Roxy configuration.
             skill_registry: Optional skill registry. Uses singleton if None.
+            local_client: Optional local LLM client. Created from config if None.
+            cloud_client: Optional cloud LLM client. Created from config if None.
+            privacy: Optional privacy gateway. Created from config if None.
+            router: Optional confidence router. Created from dependencies if None.
+            memory: Optional memory manager. Created from config if None.
+
+        Note:
+            For backward compatibility, when dependencies are not provided,
+            they are created from the config. This allows existing code to
+            work without changes while enabling dependency injection for
+            testing and advanced use cases.
         """
         self.config = config
 
         # Get or use provided skill registry
         self.skill_registry = skill_registry or SkillRegistry.get_instance()
 
-        # Initialize LLM clients
-        self.local_client = OllamaClient(
+        # Initialize or inject LLM clients
+        self.local_client = local_client or OllamaClient(
             host=config.llm_local.host,
             model=config.llm_local.model,
             router_model=config.llm_local.router_model,
         )
-        self.cloud_client = CloudLLMClient(
+        self.cloud_client = cloud_client or CloudLLMClient(
             provider=config.llm_cloud.provider,
             model=config.llm_cloud.model,
             api_key=config.llm_cloud.api_key,
             base_url=config.llm_cloud.base_url,
         )
 
-        # Initialize privacy gateway (shared with skills)
-        self.privacy = PrivacyGateway(
+        # Initialize or inject privacy gateway (shared with skills)
+        self.privacy = privacy or PrivacyGateway(
             redact_patterns=config.privacy.redact_patterns,
             consent_mode=config.privacy.cloud_consent,
             log_path=f"{config.data_dir}/cloud_requests.log",
         )
 
-        # Initialize confidence router
-        self.router = ConfidenceRouter(
+        # Initialize or inject confidence router
+        self.router = router or ConfidenceRouter(
             local_client=self.local_client,
             cloud_client=self.cloud_client,
             privacy=self.privacy,
             confidence_threshold=config.llm_cloud.confidence_threshold,
         )
 
-        # Initialize memory (use real MemoryManager)
-        self.memory: MemoryManager = MemoryManager(
+        # Initialize or inject memory manager
+        self.memory = memory or MemoryManager(
             config=config.memory,
             ollama_host=config.llm_local.host,
         )
@@ -216,14 +248,15 @@ When responding:
                     memory=self.memory,
                     config=self.config,
                     conversation_history=self.conversation_history.copy(),
+                    local_llm_client=self.local_client,
                 )
 
                 # Inject privacy gateway into skills that need it
                 if hasattr(skill, 'privacy_gateway') and skill.privacy_gateway is None:
                     skill.privacy_gateway = self.privacy
 
-                # Execute the skill
-                result: SkillResult = await skill.execute(context)
+                # Execute the skill with lifecycle hooks
+                result: SkillResult = await skill._execute_with_hooks(context)
 
                 skill_elapsed = (time.time() - skill_start) * 1000
                 self._track_timing("skill_execution", skill_elapsed)

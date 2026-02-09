@@ -139,7 +139,15 @@ class GitOpsSkill(RoxySkill):
         Returns:
             Formatted status output.
         """
-        cwd = Path(path) if path else None
+        cwd = None
+        if path:
+            from roxy.macos.path_validation import validate_path
+
+            try:
+                cwd = validate_path(path, must_exist=True)
+            except (ValueError, FileNotFoundError) as e:
+                return f"Invalid repository path '{path}': {e}"
+
         result = self._run_git(["status", "-sb"], cwd=cwd)
 
         if not result.success:
@@ -164,7 +172,15 @@ class GitOpsSkill(RoxySkill):
         Returns:
             Formatted commit log.
         """
-        cwd = Path(path) if path else None
+        cwd = None
+        if path:
+            from roxy.macos.path_validation import validate_path
+
+            try:
+                cwd = validate_path(path, must_exist=True)
+            except (ValueError, FileNotFoundError) as e:
+                return f"Invalid repository path '{path}': {e}"
+
         result = self._run_git(
             ["log", "-n", str(count), "--pretty=format:%h - %s (%an, %ar)"],
             cwd=cwd,
@@ -185,7 +201,16 @@ class GitOpsSkill(RoxySkill):
         Returns:
             True if successful.
         """
-        cwd = Path(path) if path else None
+        cwd = None
+        if path:
+            from roxy.macos.path_validation import validate_path
+
+            try:
+                cwd = validate_path(path, must_exist=True)
+            except (ValueError, FileNotFoundError) as e:
+                logger.error(f"Invalid repository path '{path}': {e}")
+                return False
+
         result = self._run_git(["add"] + files, cwd=cwd)
 
         return result.success
@@ -245,12 +270,13 @@ class GitOpsSkill(RoxySkill):
 
         return result.success
 
-    async def generate_commit_message(self, path: str | None = None) -> str:
+    async def generate_commit_message(self, context: SkillContext, path: str | None = None) -> str:
         """Generate a commit message using local LLM.
 
         Analyzes staged changes to generate an appropriate commit message.
 
         Args:
+            context: SkillContext with access to local LLM client.
             path: Path to repository.
 
         Returns:
@@ -263,8 +289,53 @@ class GitOpsSkill(RoxySkill):
         if not diff_result.success or not diff_result.output:
             return "No staged changes to commit"
 
-        # For now, use a simple message
-        # TODO: Integrate with local Ollama for better message generation
+        # Try to use local LLM for commit message generation
+        if context.local_llm_client is not None:
+            try:
+                # Prepare prompt for commit message generation
+                prompt = f"""Generate a concise git commit message following conventional commits format.
+
+Staged changes:
+```
+{diff_result.output[:2000]}
+```
+
+Guidelines:
+- Use conventional commits format: <type>(<scope>): <description>
+- Types: feat, fix, docs, style, refactor, test, chore
+- Keep the description under 72 characters
+- Use imperative mood ("add" not "added" or "adds")
+- Return ONLY the commit message, nothing else
+
+Example formats:
+- feat: add user authentication
+- fix(api): resolve null pointer exception
+- docs: update README with installation steps
+- refactor: simplify user model
+
+Generate the commit message:"""
+
+                response = await context.local_llm_client.generate(
+                    prompt=prompt,
+                    temperature=0.3,  # Low temperature for consistent output
+                    max_tokens=100,
+                )
+
+                # Extract the commit message from response
+                commit_message = response.content.strip().strip('"\'').split('\n')[0]
+
+                # Validate that we got a reasonable commit message
+                if commit_message and len(commit_message) > 5 and len(commit_message) < 150:
+                    logger.info(f"Generated commit message using LLM: {commit_message}")
+                    return commit_message
+                else:
+                    logger.warning(f"LLM returned invalid commit message, falling back to simple message")
+
+            except Exception as e:
+                logger.error(f"Error generating commit message with LLM: {e}")
+                # Fall through to simple message generation
+
+        # Fallback to simple message generation
         lines = diff_result.output.split("\n")
         changed_files = [line for line in lines if line.startswith("+++ ") or line.startswith("--- ")]
 
@@ -315,7 +386,7 @@ class GitOpsSkill(RoxySkill):
                     self.git_add(["."], path)
 
                 # Generate message
-                message = await self.generate_commit_message(path)
+                message = await self.generate_commit_message(context, path)
 
             # Commit
             success = self.git_commit(message, path)

@@ -11,7 +11,7 @@ import re
 from typing import TYPE_CHECKING
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.macos.applescript import get_applescript_runner
+from roxy.macos.applescript import escape_applescript_string, get_applescript_runner, get_joinlist_handler
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +58,16 @@ class NotesSkill(RoxySkill):
         Returns:
             True if note created successfully.
         """
+        # Escape all user input to prevent AppleScript injection
+        title_safe = escape_applescript_string(title)
+        content_safe = escape_applescript_string(content)
+        folder_safe = escape_applescript_string(folder)
+
         script = f"""
         tell application "Notes"
             activate
             tell account "iCloud"
-                set newNote to make new note at folder "{folder}" with properties {{name:"{title}", body:"{content}"}}
+                set newNote to make new note at folder "{folder_safe}" with properties {{name:"{title_safe}", body:"{content_safe}"}}
             end tell
         end tell
         """
@@ -85,6 +90,9 @@ class NotesSkill(RoxySkill):
         Returns:
             List of note dicts with name, body, modified date.
         """
+        # Escape user input to prevent AppleScript injection
+        query_safe = escape_applescript_string(query)
+
         script = f"""
         tell application "Notes"
             activate
@@ -97,7 +105,7 @@ class NotesSkill(RoxySkill):
                     set noteName to name of noteRef
                     set noteBody to body of noteRef
 
-                    if noteName contains "{query}" or noteBody contains "{query}" then
+                    if noteName contains "{query_safe}" or noteBody contains "{query_safe}" then
                         set noteInfo to {{}}
                         set end of noteInfo to noteName
                         set end of noteInfo to noteBody
@@ -112,15 +120,7 @@ class NotesSkill(RoxySkill):
 
             return my joinList(foundNotes, ";;;")
         end tell
-
-        on joinList(lst, delimiter)
-            set out to ""
-            repeat with itemNum from 1 to count of lst
-                if itemNum > 1 then set out to out & delimiter
-                set out to out & item itemNum of lst
-            end repeat
-            return out
-        end joinList
+{get_joinlist_handler()}
         """
 
         try:
@@ -159,11 +159,14 @@ class NotesSkill(RoxySkill):
         Returns:
             Note dict with name and body, or None if not found.
         """
+        # Escape user input to prevent AppleScript injection
+        name_safe = escape_applescript_string(name)
+
         script = f"""
         tell application "Notes"
             activate
             tell account "iCloud"
-                set foundNote to first note whose name is "{name}"
+                set foundNote to first note whose name is "{name_safe}"
 
                 set noteInfo to {{}}
                 set end of noteInfo to name of foundNote
@@ -173,15 +176,7 @@ class NotesSkill(RoxySkill):
                 return my joinList(noteInfo, "|||")
             end tell
         end tell
-
-        on joinList(lst, delimiter)
-            set out to ""
-            repeat with itemNum from 1 to count of lst
-                if itemNum > 1 then set out to out & delimiter
-                set out to out & item itemNum of lst
-            end repeat
-            return out
-        end joinList
+{get_joinlist_handler()}
         """
 
         try:

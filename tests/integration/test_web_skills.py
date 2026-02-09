@@ -69,7 +69,7 @@ class MockBrowseSkill:
         )
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_web_search_with_privacy(mock_config: RoxyConfig) -> None:
     """Test that web search applies privacy redaction."""
     privacy = PrivacyGateway(
@@ -96,7 +96,7 @@ async def test_web_search_with_privacy(mock_config: RoxyConfig) -> None:
     assert "john@example.com" not in result.response_text
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_web_browse_skill(mock_config: RoxyConfig) -> None:
     """Test the browse skill."""
     privacy = PrivacyGateway(
@@ -123,7 +123,7 @@ async def test_web_browse_skill(mock_config: RoxyConfig) -> None:
     assert result.data is not None
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_web_skill_cloud_consent(mock_config: RoxyConfig) -> None:
     """Test that web skills respect cloud consent mode."""
     # Test with NEVER consent
@@ -153,7 +153,7 @@ async def test_web_skill_cloud_consent(mock_config: RoxyConfig) -> None:
     assert result.success is True
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_multiple_web_skills_registration(mock_config: RoxyConfig) -> None:
     """Test that multiple web skills can be registered."""
     registry = SkillRegistry()
@@ -183,7 +183,7 @@ async def test_multiple_web_skills_registration(mock_config: RoxyConfig) -> None
     assert "browse" in skill_names
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_web_skill_error_handling(mock_config: RoxyConfig) -> None:
     """Test that web skills handle errors gracefully."""
     privacy = PrivacyGateway(
@@ -229,7 +229,7 @@ async def test_web_skill_error_handling(mock_config: RoxyConfig) -> None:
     assert "error" in result.response_text.lower()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_web_search_result_parsing(mock_config: RoxyConfig) -> None:
     """Test that web search results are properly parsed."""
     privacy = PrivacyGateway(
@@ -257,7 +257,7 @@ async def test_web_search_result_parsing(mock_config: RoxyConfig) -> None:
     assert "results" in result.data
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_web_skill_with_parameters(mock_config: RoxyConfig) -> None:
     """Test web skills with additional parameters."""
     privacy = PrivacyGateway(
@@ -305,7 +305,7 @@ async def test_web_skill_with_parameters(mock_config: RoxyConfig) -> None:
     assert "5" in result.response_text
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_privacy_gateway_in_web_skills(mock_config: RoxyConfig) -> None:
     """Test that privacy gateway is properly integrated into web skills."""
     privacy = PrivacyGateway(
@@ -325,7 +325,7 @@ async def test_privacy_gateway_in_web_skills(mock_config: RoxyConfig) -> None:
     assert "555-123-4567" not in redacted
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_web_skill_response_formatting(mock_config: RoxyConfig) -> None:
     """Test that web skill responses are properly formatted."""
     privacy = PrivacyGateway(
@@ -383,4 +383,4 @@ async def test_web_skill_response_formatting(mock_config: RoxyConfig) -> None:
 
 
 # Async test marker
-pytest_asyncio = pytest.mark.asyncio
+# Note: Using @pytest.mark.asyncio decorator directly

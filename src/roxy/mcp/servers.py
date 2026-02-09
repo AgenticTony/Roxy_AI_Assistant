@@ -9,12 +9,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any, TypeAlias
 
 import yaml
+from mcp import ClientSession, types
+from mcp.client.sse import sse_client
 
 logger = logging.getLogger(__name__)
 
@@ -234,35 +236,183 @@ class MCPServerManager:
 
         For custom Python servers, imports and runs the module directly.
         For external commands, spawns a subprocess.
+
+        Args:
+            connection: ServerConnection to initialize.
+
+        Raises:
+            ValueError: If module import fails or subprocess doesn't start.
+            RuntimeError: If server doesn't respond to initialization.
         """
         config = connection.config
 
         if config.module:
-            # Import custom Python server module
-            # This will be started separately as a FastMCP server
-            logger.debug(f"Custom server module: {config.module}")
-            connection.tools = config.tools  # Use predefined tools
+            # Import custom Python server module (FastMCP)
+            logger.debug(f"Loading custom server module: {config.module}")
+
+            import importlib
+
+            try:
+                module = importlib.import_module(config.module)
+
+                # Get FastMCP instance - module should export 'mcp'
+                if not hasattr(module, "mcp"):
+                    raise ValueError(f"Module {config.module} has no 'mcp' attribute")
+
+                mcp_instance = module.mcp
+                connection.client = mcp_instance
+
+                # Extract tools from FastMCP server
+                # FastMCP has ToolManager accessible via _tool_manager attribute
+                if hasattr(mcp_instance, "_tool_manager"):
+                    try:
+                        # get_tools() is async and returns dict of FunctionTool objects
+                        tools_dict = await mcp_instance._tool_manager.get_tools()
+                        connection.tools = [
+                            {
+                                "name": tool.name,
+                                "description": tool.description or "",
+                            }
+                            for tool in tools_dict.values()
+                        ]
+                    except Exception as e:
+                        logger.warning(f"Failed to extract tools from FastMCP: {e}")
+                        connection.tools = config.tools
+                elif hasattr(mcp_instance, "_tools"):
+                    # Fallback for older FastMCP versions
+                    connection.tools = [
+                        {
+                            "name": name,
+                            "description": getattr(tool, "func", tool).__doc__ or "",
+                        }
+                        for name, tool in mcp_instance._tools.items()
+                    ]
+                else:
+                    # Fallback to config tools if no tool introspection available
+                    connection.tools = config.tools
+
+                logger.info(
+                    f"Loaded custom server {connection.name} with {len(connection.tools)} tools"
+                )
+
+            except ImportError as e:
+                raise ValueError(f"Failed to import module {config.module}: {e}") from e
+
         elif config.command:
             # Spawn subprocess for external command
-            logger.debug(f"Starting stdio server: {config.command}")
-            # TODO: Implement subprocess management
-            connection.tools = config.tools
+            logger.debug(f"Starting stdio server: {config.command} {' '.join(config.args)}")
+
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    config.command,
+                    *config.args,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                connection.process = process
+
+                # Verify process started successfully
+                await asyncio.sleep(0.1)  # Give process time to start
+                if process.returncode is not None:
+                    stderr_output = ""
+                    if process.stderr:
+                        stderr_output = (await process.stderr.read()).decode()
+                    raise RuntimeError(
+                        f"Server process exited with code {process.returncode}: {stderr_output}"
+                    )
+
+                # TODO: Send initialize message and retrieve tools dynamically
+                # For now, use predefined tools from config
+                connection.tools = config.tools
+
+                logger.info(f"Started stdio server {connection.name} (PID: {process.pid})")
+
+            except FileNotFoundError as e:
+                raise ValueError(f"Command not found: {config.command}") from e
+            except Exception as e:
+                raise RuntimeError(f"Failed to start subprocess: {e}") from e
+        else:
+            raise ValueError(
+                f"STDIO server {connection.name} has neither module nor command"
+            )
 
     async def _start_http_server(self, connection: ServerConnection) -> None:
         """Connect to an HTTP/SSE-based MCP server.
 
-        Establishes client connection and retrieves available tools.
+        Establishes a temporary connection to initialize session and retrieve available tools.
+        The actual connection is created on-demand for each tool call.
+
+        Args:
+            connection: ServerConnection to initialize.
+
+        Raises:
+            ValueError: If URL is not configured.
+            RuntimeError: If connection or initialization fails.
         """
         config = connection.config
 
         if not config.url:
             raise ValueError(f"HTTP server {connection.name} has no URL configured")
 
-        logger.debug(f"Connecting to HTTP server: {config.url}")
+        logger.debug(f"Connecting to HTTP/SSE server: {config.url}")
 
-        # TODO: Implement MCP HTTP client connection
-        # For now, use predefined tools from config
-        connection.tools = config.tools
+        # SSE client timeout settings
+        sse_read_timeout = 300  # 5 minutes for SSE connection
+        connection_timeout = config.timeout_connection
+
+        try:
+            # Create a temporary SSE client connection to retrieve server info and tools
+            async with sse_client(
+                url=config.url,
+                timeout=connection_timeout,
+                sse_read_timeout=sse_read_timeout,
+            ) as (read_stream, write_stream):
+                # Create ClientSession with the streams
+                session = ClientSession(
+                    read_stream=read_stream,
+                    write_stream=write_stream,
+                    read_timeout_seconds=timedelta(seconds=config.timeout_request),
+                )
+
+                # Initialize the session (handshake with server)
+                logger.debug(f"Initializing session with {connection.name}")
+                init_result = await session.initialize()
+
+                logger.info(
+                    f"Initialized {connection.name}: "
+                    f"protocol={init_result.protocolVersion}, "
+                    f"server={init_result.serverInfo.name} {init_result.serverInfo.version}"
+                )
+
+                # Retrieve available tools from server
+                tools_response = await session.list_tools()
+
+                # Convert MCP Tool objects to dict format for internal use
+                connection.tools = [
+                    {
+                        "name": tool.name,
+                        "description": tool.description or "",
+                        "inputSchema": tool.inputSchema,
+                    }
+                    for tool in tools_response.tools
+                ]
+
+                logger.info(f"Retrieved {len(connection.tools)} tools from {connection.name}")
+
+                # Store config for creating new connections during tool calls
+                # We don't store the session/streams since they're closed when exiting the context
+                connection.client = {
+                    "url": config.url,
+                    "timeout": connection_timeout,
+                    "sse_read_timeout": sse_read_timeout,
+                    "request_timeout": timedelta(seconds=config.timeout_request),
+                }
+
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to connect to MCP server {connection.name} at {config.url}: {e}"
+            ) from e
 
     async def stop_server(self, name: str) -> bool:
         """Stop an MCP server.
@@ -283,11 +433,27 @@ class MCPServerManager:
             # Clean up based on transport type
             if connection.config.transport == ServerTransport.STDIO:
                 if connection.process:
+                    # Gracefully terminate the subprocess
                     connection.process.terminate()
-                    await connection.process.wait()
+
+                    try:
+                        # Wait up to 5 seconds for graceful shutdown
+                        await asyncio.wait_for(connection.process.wait(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        # Force kill if graceful shutdown fails
+                        logger.warning(f"Server {name} did not terminate gracefully, killing")
+                        connection.process.kill()
+                        await connection.process.wait()
+
+                    logger.debug(f"Terminated subprocess for {name} (PID: {connection.process.pid})")
+
+                # Clear client reference for custom servers
+                if connection.client:
+                    connection.client = None
 
             connection.status = ServerStatus.STOPPED
             connection.started_at = None
+            connection.process = None
             logger.info(f"Stopped MCP server: {name}")
 
             return True
@@ -391,21 +557,18 @@ class MCPServerManager:
 
             logger.info(f"Calling {server}.{tool} with args: {list(args.keys())}")
 
-            # TODO: Implement actual MCP tool call
-            # For now, return a placeholder response
-            result_data = {
-                "server": server,
-                "tool": tool,
-                "args": args,
-                "timestamp": datetime.now().isoformat(),
-            }
-
-            return ToolCallResult(
-                success=True,
-                data=result_data,
-                server=server,
-                tool=tool,
-            )
+            # Route to appropriate transport handler
+            if connection.config.transport == ServerTransport.STDIO:
+                return await self._call_stdio_tool(connection, tool, args)
+            elif connection.config.transport in (ServerTransport.SSE, ServerTransport.HTTP):
+                return await self._call_http_tool(connection, tool, args)
+            else:
+                return ToolCallResult(
+                    success=False,
+                    error=f"Unsupported transport: {connection.config.transport}",
+                    server=server,
+                    tool=tool,
+                )
 
         except Exception as e:
             logger.error(f"Error calling {server}.{tool}: {e}")
@@ -415,6 +578,159 @@ class MCPServerManager:
                 server=server,
                 tool=tool,
             )
+
+    async def _call_http_tool(
+        self,
+        connection: ServerConnection,
+        tool: str,
+        args: dict[str, Any],
+    ) -> ToolCallResult:
+        """Call a tool on an HTTP/SSE MCP server.
+
+        Creates a new SSE connection for this tool call.
+
+        Args:
+            connection: Active server connection.
+            tool: Tool name to call.
+            args: Tool arguments.
+
+        Returns:
+            ToolCallResult with success status and data.
+        """
+        client_config = connection.client
+        if not client_config or "url" not in client_config:
+            return ToolCallResult(
+                success=False,
+                error="HTTP client not initialized",
+                server=connection.name,
+                tool=tool,
+            )
+
+        try:
+            # Create a new SSE connection for this tool call
+            async with sse_client(
+                url=client_config["url"],
+                timeout=client_config["timeout"],
+                sse_read_timeout=client_config["sse_read_timeout"],
+            ) as (read_stream, write_stream):
+                session = ClientSession(
+                    read_stream=read_stream,
+                    write_stream=write_stream,
+                    read_timeout_seconds=client_config["request_timeout"],
+                )
+
+                # Initialize session
+                await session.initialize()
+
+                # Call the tool
+                result = await session.call_tool(name=tool, arguments=args)
+
+                # Convert MCP result to ToolCallResult
+                if result.isError:
+                    error_content = []
+                    for content in result.content:
+                        if hasattr(content, "text"):
+                            error_content.append(content.text)
+                        else:
+                            error_content.append(str(content))
+
+                    return ToolCallResult(
+                        success=False,
+                        error=" | ".join(error_content),
+                        server=connection.name,
+                        tool=tool,
+                    )
+
+                # Extract result data
+                result_data = []
+                for content in result.content:
+                    if hasattr(content, "text"):
+                        result_data.append({"type": "text", "text": content.text})
+                    elif hasattr(content, "data"):
+                        result_data.append({"type": "data", "data": content.data})
+                    else:
+                        result_data.append({"type": "unknown", "value": str(content)})
+
+                return ToolCallResult(
+                    success=True,
+                    data=result_data,
+                    server=connection.name,
+                    tool=tool,
+                )
+
+        except Exception as e:
+            logger.error(f"Error calling HTTP tool {connection.name}.{tool}: {e}")
+            return ToolCallResult(
+                success=False,
+                error=str(e),
+                server=connection.name,
+                tool=tool,
+            )
+
+    async def _call_stdio_tool(
+        self,
+        connection: ServerConnection,
+        tool: str,
+        args: dict[str, Any],
+    ) -> ToolCallResult:
+        """Call a tool on a stdio-based MCP server.
+
+        For custom FastMCP servers, calls the tool directly via the MCP instance.
+        For external process servers, uses JSON-RPC over stdin/stdout.
+
+        Args:
+            connection: Active server connection.
+            tool: Tool name to call.
+            args: Tool arguments.
+
+        Returns:
+            ToolCallResult with success status and data.
+        """
+        # For custom FastMCP servers
+        if connection.config.module and connection.client:
+            try:
+                mcp_instance = connection.client
+
+                # FastMCP servers have a run method for calling tools
+                # We need to invoke the tool function directly
+                if hasattr(mcp_instance, "_tools") and tool in mcp_instance._tools:
+                    tool_obj = mcp_instance._tools[tool]
+                    tool_func = getattr(tool_obj, "func", tool_obj)
+
+                    # Call the tool function
+                    result = await tool_func(**args) if asyncio.iscoroutinefunction(tool_func) else tool_func(**args)
+
+                    return ToolCallResult(
+                        success=True,
+                        data={"result": result},
+                        server=connection.name,
+                        tool=tool,
+                    )
+                else:
+                    return ToolCallResult(
+                        success=False,
+                        error=f"Tool {tool} not found in FastMCP server",
+                        server=connection.name,
+                        tool=tool,
+                    )
+
+            except Exception as e:
+                logger.error(f"Error calling stdio tool {connection.name}.{tool}: {e}")
+                return ToolCallResult(
+                    success=False,
+                    error=str(e),
+                    server=connection.name,
+                    tool=tool,
+                )
+
+        # For external process servers - use JSON-RPC over stdin/stdout
+        # TODO: Implement proper JSON-RPC communication
+        return ToolCallResult(
+            success=False,
+            error="External process tool calls not yet implemented",
+            server=connection.name,
+            tool=tool,
+        )
 
     async def health_check(self, server: str) -> bool:
         """Check if a server is healthy and responding.
@@ -432,6 +748,19 @@ class MCPServerManager:
 
         if connection.status != ServerStatus.RUNNING:
             return False
+
+        # For STDIO servers, check if process is still alive
+        if connection.config.transport == ServerTransport.STDIO:
+            if connection.process:
+                # Process is dead if returncode is not None
+                if connection.process.returncode is not None:
+                    logger.warning(
+                        f"Server {server} process exited (code: {connection.process.returncode})"
+                    )
+                    connection.status = ServerStatus.ERROR
+                    connection.error = f"Process exited with code {connection.process.returncode}"
+                    return False
+            return True
 
         # If server has a health check URL, verify it
         if connection.config.health_check:

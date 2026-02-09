@@ -130,9 +130,13 @@ class SpeechToText:
             FileNotFoundError: If audio file doesn't exist.
             RuntimeError: If transcription fails.
         """
-        audio_path = Path(path)
-        if not audio_path.exists():
-            raise FileNotFoundError(f"Audio file not found: {path}")
+        # Validate the audio file path
+        from roxy.macos.path_validation import validate_file_path
+
+        try:
+            audio_path = validate_file_path(path, must_exist=True)
+        except (ValueError, FileNotFoundError) as e:
+            raise FileNotFoundError(f"Invalid audio file path '{path}': {e}") from e
 
         await self._ensure_model_loaded()
 

@@ -48,11 +48,15 @@ class RunMode(str, Enum):
     SERVER = "server"  # Background service with menu bar
 
 
-class RoxyREPL:
-    """Interactive REPL for Roxy."""
+class RoxyInitializer:
+    """Handles initialization of Roxy components."""
 
-    def __init__(self, config: RoxyConfig, mode: RunMode = RunMode.TEXT) -> None:
-        """Initialize the REPL.
+    def __init__(
+        self,
+        config: RoxyConfig,
+        mode: RunMode,
+    ) -> None:
+        """Initialize the initializer.
 
         Args:
             config: Roxy configuration.
@@ -64,14 +68,20 @@ class RoxyREPL:
         self.voice_pipeline: VoicePipeline | None = None
         self.menubar: RoxyMenuBar | None = None
         self.mcp_manager: MCPServerManager | None = None
-        self.running = False
 
-    async def initialize(self, use_memory: bool = True, cloud_mode: str | None = None) -> None:
+    async def initialize(
+        self,
+        use_memory: bool = True,
+        cloud_mode: str | None = None,
+    ) -> tuple[RoxyOrchestrator, VoicePipeline | None, RoxyMenuBar | None]:
         """Initialize all Roxy components.
 
         Args:
             use_memory: Whether to initialize the memory system.
             cloud_mode: Override cloud consent mode (never|ask|always).
+
+        Returns:
+            Tuple of (orchestrator, voice_pipeline, menubar).
         """
         console.print(f"[bold cyan]Initializing {self.config.name}...[/bold cyan]")
 
@@ -122,6 +132,8 @@ class RoxyREPL:
         except Exception as e:
             console.print(f"[red]✗[/red] Failed to initialize: {e}")
             raise
+
+        return self.orchestrator, self.voice_pipeline, self.menubar
 
     async def _verify_ollama(self) -> None:
         """Verify Ollama is running and models are available."""
@@ -273,6 +285,195 @@ class RoxyREPL:
             logger.warning(f"MCP initialization failed: {e}")
             console.print("[yellow]⚠[/yellow] MCP servers not available")
 
+    async def shutdown(self) -> None:
+        """Shutdown initialized components."""
+        # Stop voice pipeline
+        if self.voice_pipeline:
+            await self.voice_pipeline.stop()
+
+        # Stop menu bar
+        if self.menubar:
+            self.menubar.stop()
+
+        # Stop MCP servers
+        if self.mcp_manager:
+            await self.mcp_manager.stop_all()
+
+        # Shutdown orchestrator
+        if self.orchestrator:
+            await self.orchestrator.shutdown()
+
+
+class CommandHandler:
+    """Handles REPL slash commands."""
+
+    def __init__(
+        self,
+        config: RoxyConfig,
+        orchestrator: RoxyOrchestrator | None,
+    ) -> None:
+        """Initialize the command handler.
+
+        Args:
+            config: Roxy configuration.
+            orchestrator: The orchestrator instance (may be None).
+        """
+        self.config = config
+        self.orchestrator = orchestrator
+
+    async def handle(self, command: str) -> bool:
+        """Handle a REPL command.
+
+        Args:
+            command: Command string starting with '/'.
+
+        Returns:
+            True if the command was handled, False otherwise.
+        """
+        parts = command.split()
+        cmd = parts[0].lower()
+
+        if cmd in ("/quit", "/exit"):
+            return False  # Signal to exit
+
+        if cmd == "/help":
+            self._print_help()
+        elif cmd == "/stats":
+            await self._print_stats()
+        elif cmd == "/config":
+            self._print_config()
+        elif cmd == "/memory":
+            await self._print_memory()
+        else:
+            console.print(f"[red]Unknown command: {cmd}[/red]")
+            console.print("Type [bold]/help[/bold] for available commands")
+
+        return True  # Continue running
+
+    def _print_help(self) -> None:
+        """Print help message."""
+        help_table = Table(title="Available Commands")
+        help_table.add_column("Command", style="cyan")
+        help_table.add_column("Description")
+
+        commands = [
+            ("/help", "Show this help message"),
+            ("/stats", "Show routing and usage statistics"),
+            ("/config", "Show current configuration"),
+            ("/memory", "Search and display memories"),
+            ("/quit, /exit", "Exit the REPL"),
+        ]
+
+        for cmd, desc in commands:
+            help_table.add_row(cmd, desc)
+
+        console.print(help_table)
+
+    async def _print_stats(self) -> None:
+        """Print statistics."""
+        if not self.orchestrator:
+            console.print("[red]Orchestrator not initialized[/red]")
+            return
+
+        stats = await self.orchestrator.get_statistics()
+
+        stats_table = Table(title="Statistics")
+        stats_table.add_column("Metric", style="cyan")
+        stats_table.add_column("Value")
+
+        stats_table.add_row("Conversation Length", str(stats["conversation_length"]))
+        stats_table.add_row("Skills Registered", str(stats["skills_registered"]))
+
+        routing = stats["routing_stats"]
+        stats_table.add_row("Total Requests", str(routing["total_requests"]))
+        stats_table.add_row("Local Requests", str(routing["local_requests"]))
+        stats_table.add_row("Cloud Requests", str(routing["cloud_requests"]))
+        stats_table.add_row("Local Rate", f"{routing['local_rate']:.1%}")
+        stats_table.add_row("Cloud Rate", f"{routing['cloud_rate']:.1%}")
+
+        console.print(stats_table)
+
+    def _print_config(self) -> None:
+        """Print current configuration."""
+        config_table = Table(title="Configuration")
+        config_table.add_column("Setting", style="cyan")
+        config_table.add_column("Value")
+
+        config_table.add_row("Name", self.config.name)
+        config_table.add_row("Version", self.config.version)
+        config_table.add_row("Data Directory", self.config.data_dir)
+        config_table.add_row("Log Level", self.config.log_level)
+        config_table.add_row("", "")
+        config_table.add_row("Local Model", self.config.llm_local.model)
+        config_table.add_row("Router Model", self.config.llm_local.router_model)
+        config_table.add_row("Local Host", self.config.llm_local.host)
+        config_table.add_row("", "")
+        config_table.add_row("Cloud Provider", self.config.llm_cloud.provider.value)
+        config_table.add_row("Cloud Model", self.config.llm_cloud.model)
+        config_table.add_row("Confidence Threshold", str(self.config.llm_cloud.confidence_threshold))
+        config_table.add_row("", "")
+        config_table.add_row("PII Redaction", str(self.config.privacy.pii_redaction_enabled))
+        config_table.add_row("Cloud Consent", self.config.privacy.cloud_consent.value)
+
+        console.print(config_table)
+
+    async def _print_memory(self) -> None:
+        """Print memory contents."""
+        if not self.orchestrator:
+            console.print("[red]Orchestrator not initialized[/red]")
+            return
+
+        memories = await self.orchestrator.get_memory("")
+
+        if not memories:
+            console.print("[yellow]No memories stored yet[/yellow]")
+            return
+
+        memory_table = Table(title="Stored Memories")
+        memory_table.add_column("#", style="cyan")
+        memory_table.add_column("Content")
+
+        for i, memory in enumerate(memories[:10], 1):
+            memory_table.add_row(str(i), memory[:100])
+
+        console.print(memory_table)
+
+
+class RoxyREPL:
+    """Interactive REPL for Roxy."""
+
+    def __init__(self, config: RoxyConfig, mode: RunMode = RunMode.TEXT) -> None:
+        """Initialize the REPL.
+
+        Args:
+            config: Roxy configuration.
+            mode: Execution mode (text, voice, or server).
+        """
+        self.config = config
+        self.mode = mode
+        self.running = False
+        self.initializer = RoxyInitializer(config, mode)
+        self.command_handler = CommandHandler(config, None)
+
+        # These will be set after initialization
+        self.orchestrator: RoxyOrchestrator | None = None
+        self.voice_pipeline: VoicePipeline | None = None
+        self.menubar: RoxyMenuBar | None = None
+
+    async def initialize(self, use_memory: bool = True, cloud_mode: str | None = None) -> None:
+        """Initialize all Roxy components.
+
+        Args:
+            use_memory: Whether to initialize the memory system.
+            cloud_mode: Override cloud consent mode (never|ask|always).
+        """
+        self.orchestrator, self.voice_pipeline, self.menubar = await self.initializer.initialize(
+            use_memory=use_memory,
+            cloud_mode=cloud_mode,
+        )
+        # Update command handler with the initialized orchestrator
+        self.command_handler = CommandHandler(self.config, self.orchestrator)
+
     async def run(self) -> None:
         """Run the appropriate mode."""
         self.running = True
@@ -299,7 +500,10 @@ class RoxyREPL:
                     continue
 
                 if user_input.startswith("/"):
-                    await self._handle_command(user_input)
+                    should_continue = await self.command_handler.handle(user_input)
+                    if not should_continue:
+                        self.running = False
+                        console.print("[yellow]Goodbye![/yellow]")
                     continue
 
                 await self._process_input(user_input)
@@ -395,35 +599,6 @@ class RoxyREPL:
         ))
         console.print()
 
-    async def _handle_command(self, command: str) -> None:
-        """Handle REPL commands.
-
-        Args:
-            command: Command string starting with '/'.
-        """
-        parts = command.split()
-        cmd = parts[0].lower()
-
-        if cmd in ("/quit", "/exit"):
-            self.running = False
-            console.print("[yellow]Goodbye![/yellow]")
-
-        elif cmd == "/help":
-            self._print_help()
-
-        elif cmd == "/stats":
-            await self._print_stats()
-
-        elif cmd == "/config":
-            self._print_config()
-
-        elif cmd == "/memory":
-            await self._print_memory()
-
-        else:
-            console.print(f"[red]Unknown command: {cmd}[/red]")
-            console.print("Type [bold]/help[/bold] for available commands")
-
     def _print_welcome(self) -> None:
         """Print welcome message."""
         welcome_text = f"""
@@ -437,113 +612,10 @@ Type your message to chat, or [bold]/help[/bold] for commands.
 """
         console.print(Panel(welcome_text, border_style="cyan"))
 
-    def _print_help(self) -> None:
-        """Print help message."""
-        help_table = Table(title="Available Commands")
-        help_table.add_column("Command", style="cyan")
-        help_table.add_column("Description")
-
-        commands = [
-            ("/help", "Show this help message"),
-            ("/stats", "Show routing and usage statistics"),
-            ("/config", "Show current configuration"),
-            ("/memory", "Search and display memories"),
-            ("/quit, /exit", "Exit the REPL"),
-        ]
-
-        for cmd, desc in commands:
-            help_table.add_row(cmd, desc)
-
-        console.print(help_table)
-
-    async def _print_stats(self) -> None:
-        """Print statistics."""
-        if not self.orchestrator:
-            console.print("[red]Orchestrator not initialized[/red]")
-            return
-
-        stats = await self.orchestrator.get_statistics()
-
-        stats_table = Table(title="Statistics")
-        stats_table.add_column("Metric", style="cyan")
-        stats_table.add_column("Value")
-
-        stats_table.add_row("Conversation Length", str(stats["conversation_length"]))
-        stats_table.add_row("Skills Registered", str(stats["skills_registered"]))
-
-        routing = stats["routing_stats"]
-        stats_table.add_row("Total Requests", str(routing["total_requests"]))
-        stats_table.add_row("Local Requests", str(routing["local_requests"]))
-        stats_table.add_row("Cloud Requests", str(routing["cloud_requests"]))
-        stats_table.add_row("Local Rate", f"{routing['local_rate']:.1%}")
-        stats_table.add_row("Cloud Rate", f"{routing['cloud_rate']:.1%}")
-
-        console.print(stats_table)
-
-    def _print_config(self) -> None:
-        """Print current configuration."""
-        config_table = Table(title="Configuration")
-        config_table.add_column("Setting", style="cyan")
-        config_table.add_column("Value")
-
-        config_table.add_row("Name", self.config.name)
-        config_table.add_row("Version", self.config.version)
-        config_table.add_row("Data Directory", self.config.data_dir)
-        config_table.add_row("Log Level", self.config.log_level)
-        config_table.add_row("", "")
-        config_table.add_row("Local Model", self.config.llm_local.model)
-        config_table.add_row("Router Model", self.config.llm_local.router_model)
-        config_table.add_row("Local Host", self.config.llm_local.host)
-        config_table.add_row("", "")
-        config_table.add_row("Cloud Provider", self.config.llm_cloud.provider.value)
-        config_table.add_row("Cloud Model", self.config.llm_cloud.model)
-        config_table.add_row("Confidence Threshold", str(self.config.llm_cloud.confidence_threshold))
-        config_table.add_row("", "")
-        config_table.add_row("PII Redaction", str(self.config.privacy.pii_redaction_enabled))
-        config_table.add_row("Cloud Consent", self.config.privacy.cloud_consent.value)
-
-        console.print(config_table)
-
-    async def _print_memory(self) -> None:
-        """Print memory contents."""
-        if not self.orchestrator:
-            console.print("[red]Orchestrator not initialized[/red]")
-            return
-
-        memories = await self.orchestrator.get_memory("")
-
-        if not memories:
-            console.print("[yellow]No memories stored yet[/yellow]")
-            return
-
-        memory_table = Table(title="Stored Memories")
-        memory_table.add_column("#", style="cyan")
-        memory_table.add_column("Content")
-
-        for i, memory in enumerate(memories[:10], 1):
-            memory_table.add_row(str(i), memory[:100])
-
-        console.print(memory_table)
-
     async def shutdown(self) -> None:
         """Shutdown the REPL and cleanup."""
         self.running = False
-
-        # Stop voice pipeline
-        if self.voice_pipeline:
-            await self.voice_pipeline.stop()
-
-        # Stop menu bar
-        if self.menubar:
-            self.menubar.stop()
-
-        # Stop MCP servers
-        if self.mcp_manager:
-            await self.mcp_manager.stop_all()
-
-        # Shutdown orchestrator
-        if self.orchestrator:
-            await self.orchestrator.shutdown()
+        await self.initializer.shutdown()
 
     def _shutdown(self) -> None:
         """Sync shutdown callback for menu bar."""

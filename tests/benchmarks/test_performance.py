@@ -28,7 +28,7 @@ TARGET_SKILL_EXECUTION = 500
 TARGET_E2E_VOICE_LOCAL = 4000
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_find_performance(mock_config: RoxyConfig) -> None:
     """Benchmark skill finding performance.
 
@@ -69,7 +69,7 @@ async def test_skill_find_performance(mock_config: RoxyConfig) -> None:
     assert avg_time < 50, f"Skill find too slow: {avg_time:.2f}ms"
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_execution_performance(mock_config: RoxyConfig) -> None:
     """Benchmark skill execution performance.
 
@@ -114,7 +114,7 @@ async def test_skill_execution_performance(mock_config: RoxyConfig) -> None:
         assert avg_time < TARGET_SKILL_EXECUTION, f"Skill execution too slow: {avg_time:.2f}ms"
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_memory_search_performance(mock_config: RoxyConfig) -> None:
     """Benchmark memory search performance.
 
@@ -150,7 +150,7 @@ async def test_memory_search_performance(mock_config: RoxyConfig) -> None:
     await manager.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_orchestrator_throughput(mock_config: RoxyConfig) -> None:
     """Benchmark orchestrator request throughput.
 
@@ -194,7 +194,7 @@ async def test_orchestrator_throughput(mock_config: RoxyConfig) -> None:
         await orchestrator.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_timing_stats_collection(mock_config: RoxyConfig) -> None:
     """Test that timing statistics are properly collected."""
     registry = SkillRegistry()
@@ -242,7 +242,7 @@ async def test_timing_stats_collection(mock_config: RoxyConfig) -> None:
         await orchestrator.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_concurrent_performance(mock_config: RoxyConfig) -> None:
     """Test performance under concurrent requests."""
     import asyncio
@@ -286,7 +286,7 @@ async def test_concurrent_performance(mock_config: RoxyConfig) -> None:
         await orchestrator.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_memory_usage_stability(mock_config: RoxyConfig) -> None:
     """Test that memory usage remains stable over many requests."""
     import gc
@@ -338,4 +338,4 @@ async def test_memory_usage_stability(mock_config: RoxyConfig) -> None:
 
 
 # Async test marker
-pytest_asyncio = pytest.mark.asyncio
+# Note: Using @pytest.mark.asyncio decorator directly

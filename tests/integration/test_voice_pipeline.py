@@ -21,7 +21,7 @@ from roxy.brain.orchestrator import RoxyOrchestrator
 from roxy.skills.registry import SkillRegistry
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_wake_word_detection(mock_config: RoxyConfig) -> None:
     """Test that wake word is detected correctly."""
     from roxy.voice.wake_word import WakeWordDetector
@@ -44,7 +44,7 @@ async def test_wake_word_detection(mock_config: RoxyConfig) -> None:
         assert detected is True
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_stt_transcription(mock_config: RoxyConfig) -> None:
     """Test speech-to-text transcription."""
     from roxy.voice.stt import STTEngine
@@ -73,7 +73,7 @@ async def test_stt_transcription(mock_config: RoxyConfig) -> None:
         assert mock_model.transcribe.called
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_tts_generation(mock_config: RoxyConfig) -> None:
     """Test text-to-speech generation."""
     from roxy.voice.tts import TTSEngine
@@ -95,7 +95,7 @@ async def test_tts_generation(mock_config: RoxyConfig) -> None:
         assert mock_generate.called_with(text)
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_voice_pipeline_full_flow(mock_config: RoxyConfig) -> None:
     """Test complete voice pipeline flow."""
     registry = SkillRegistry()
@@ -145,7 +145,7 @@ async def test_voice_pipeline_full_flow(mock_config: RoxyConfig) -> None:
         await orchestrator.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_voice_pipeline_start_stop(mock_config: RoxyConfig) -> None:
     """Test starting and stopping the voice pipeline."""
     registry = SkillRegistry()
@@ -185,7 +185,7 @@ async def test_voice_pipeline_start_stop(mock_config: RoxyConfig) -> None:
         await orchestrator.shutdown()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_voice_pipeline_noise_filtering(mock_config: RoxyConfig) -> None:
     """Test that voice pipeline filters out background noise."""
     from roxy.voice.stt import STTEngine
@@ -211,7 +211,7 @@ async def test_voice_pipeline_noise_filtering(mock_config: RoxyConfig) -> None:
         assert text == "" or text.isspace()
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_tts_voice_selection(mock_config: RoxyConfig) -> None:
     """Test that different voices can be selected for TTS."""
     from roxy.voice.tts import TTSEngine
@@ -229,7 +229,7 @@ async def test_tts_voice_selection(mock_config: RoxyConfig) -> None:
             assert f"audio_for_{voice}".encode() in audio
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_voice_speech_speed_adjustment(mock_config: RoxyConfig) -> None:
     """Test that TTS speech speed can be adjusted."""
     from roxy.voice.tts import TTSEngine
@@ -246,7 +246,7 @@ async def test_voice_speech_speed_adjustment(mock_config: RoxyConfig) -> None:
         assert mock_generate.call_args[1].get("speed") == 1.5
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_voice_pipeline_error_handling(mock_config: RoxyConfig) -> None:
     """Test that voice pipeline handles errors gracefully."""
     registry = SkillRegistry()
@@ -285,4 +285,4 @@ async def test_voice_pipeline_error_handling(mock_config: RoxyConfig) -> None:
 
 
 # Async test marker
-pytest_asyncio = pytest.mark.asyncio
+# Note: Using @pytest.mark.asyncio decorator directly

@@ -16,6 +16,77 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def get_joinlist_handler() -> str:
+    """Return AppleScript joinList handler code for use in scripts.
+
+    This is a helper function that joins list items with a delimiter.
+    It's commonly used in AppleScript scripts that return structured data.
+
+    Returns:
+        AppleScript code for the joinList handler.
+
+    Examples:
+        >>> script = f'''
+        ... tell application "Finder"
+        ...     set fileList to every file
+        ...     return my joinList(fileList, "|||")
+        ... end tell
+        ...
+        ... {get_joinlist_handler()}
+        ... '''
+    """
+    return '''
+        on joinList(lst, delimiter)
+            set out to ""
+            repeat with itemNum from 1 to count of lst
+                if itemNum > 1 then set out to out & delimiter
+                set out to out & item itemNum of lst
+            end repeat
+            return out
+        end joinList
+    '''
+
+
+def escape_applescript_string(s: str) -> str:
+    """Escape a string for safe use in AppleScript.
+
+    AppleScript requires escaping of special characters to prevent
+    injection attacks. This function handles:
+    - Backslashes: \\
+    - Double quotes: \\"
+    - Line feeds: \\n
+    - Carriage returns: \\r
+    - Tab characters: \\t
+
+    The escaping order is important - backslashes must be escaped first
+    to avoid double-escaping previously escaped characters.
+
+    Args:
+        s: String to escape
+
+    Returns:
+        Safely escaped string for AppleScript
+
+    Examples:
+        >>> escape_applescript_string('Hello "World"')
+        'Hello \\"World\\"'
+        >>> escape_applescript_string('path\\to\\file')
+        'path\\\\to\\\\file'
+        >>> escape_applescript_string('line1\\nline2')
+        'line1\\\\nline2'
+    """
+    # Replace backslash first (to avoid double-escaping)
+    s = s.replace("\\", "\\\\")
+    # Then escape quotes
+    s = s.replace('"', '\\"')
+    # Handle line breaks
+    s = s.replace('\n', '\\n')
+    s = s.replace('\r', '\\r')
+    # Handle tabs
+    s = s.replace('\t', '\\t')
+    return s
+
+
 class AppleScriptRunner:
     """
     Runner for executing AppleScript commands.
@@ -247,9 +318,10 @@ class AppleScriptRunner:
         Returns:
             True if successful.
         """
+        url_esc = escape_applescript_string(url)
         script = f'''
         tell application "System Events"
-            open location "{url}"
+            open location "{url_esc}"
         end tell
         '''
         try:
@@ -269,9 +341,8 @@ class AppleScriptRunner:
         Returns:
             True if successful.
         """
-        # Escape quotes in title and message
-        title_esc = title.replace('"', '\\"')
-        message_esc = message.replace('"', '\\"')
+        title_esc = escape_applescript_string(title)
+        message_esc = escape_applescript_string(message)
 
         script = f'''
         display notification "{message_esc}" with title "{title_esc}"
@@ -311,8 +382,7 @@ class AppleScriptRunner:
         Returns:
             True if successful.
         """
-        # Escape quotes and special characters
-        text_esc = text.replace('"', '\\"').replace('\\', '\\\\')
+        text_esc = escape_applescript_string(text)
 
         script = f'''
         tell application "System Events"
@@ -488,8 +558,9 @@ class AppleScriptRunner:
         Returns:
             List of dicts with event summary, start time, and end time.
         """
-        # Get today's date in format for AppleScript
-        today = datetime.now().strftime("%A, %B %d, %Y")
+        # Get today's date in format for AppleScript - this is safe since
+        # we control the format string and datetime.now() returns trusted data
+        today = escape_applescript_string(datetime.now().strftime("%A, %B %d, %Y"))
 
         script = f'''
         tell application "Calendar"
@@ -621,9 +692,8 @@ class AppleScriptRunner:
         Returns:
             True if successful.
         """
-        # Escape quotes and special characters for JXA
-        title_esc = title.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        body_esc = body.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        title_esc = escape_applescript_string(title)
+        body_esc = escape_applescript_string(body)
 
         jxa_script = f'''
         var Notes = Application("Notes");

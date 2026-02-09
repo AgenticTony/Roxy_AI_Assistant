@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.macos.applescript import get_applescript_runner
+from roxy.macos.applescript import escape_applescript_string, get_applescript_runner, get_joinlist_handler
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,9 @@ class CalendarSkill(RoxySkill):
         match = re.search(date_pattern, text)
 
         if match:
-            return f'date "{match.group(1)}"'
+            # Escape user input to prevent AppleScript injection
+            date_str = escape_applescript_string(match.group(1))
+            return f'date "{date_str}"'
 
         # Default to today
         return "date (current date)"
@@ -131,15 +133,7 @@ class CalendarSkill(RoxySkill):
         on listToString(lst)
             return lst as string
         end listToString
-
-        on joinList(lst, delimiter)
-            set out to ""
-            repeat with itemNum from 1 to count of lst
-                if itemNum > 1 then set out to out & delimiter
-                set out to out & item itemNum of lst
-            end repeat
-            return out
-        end joinList
+{get_joinlist_handler()}
         """
 
         try:
@@ -187,19 +181,25 @@ class CalendarSkill(RoxySkill):
             True if event created successfully.
         """
         if end_date is None:
-            # Default to 1 hour duration
-            end_date = f'date "{start_date}" + 1 * hours'
+            # Default to 1 hour duration - start_date may be user input
+            # but is expected to be an AppleScript date expression
+            end_date = f'date "{escape_applescript_string(start_date)}" + 1 * hours'
+
+        # Escape all user input to prevent AppleScript injection
+        title_safe = escape_applescript_string(title)
+        location_safe = escape_applescript_string(location)
+        notes_safe = escape_applescript_string(notes)
 
         script = f"""
         tell application "Calendar"
             activate
             tell calendar "Home"
-                set newEvent to make new event at end of events with properties {{summary:"{title}", start date:{start_date}, end date:{end_date}}}
-                if "{location}" is not "" then
-                    set location of newEvent to "{location}"
+                set newEvent to make new event at end of events with properties {{summary:"{title_safe}", start date:{start_date}, end date:{end_date}}}
+                if "{location_safe}" is not "" then
+                    set location of newEvent to "{location_safe}"
                 end if
-                if "{notes}" is not "" then
-                    set description of newEvent to "{notes}"
+                if "{notes_safe}" is not "" then
+                    set description of newEvent to "{notes_safe}"
                 end if
             end tell
         end tell

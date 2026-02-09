@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.macos.applescript import get_applescript_runner
+from roxy.macos.applescript import escape_applescript_string, get_applescript_runner, get_joinlist_handler
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,9 @@ class RemindersSkill(RoxySkill):
         match = re.search(date_pattern, text)
 
         if match:
-            return f'date "{match.group(1)}"'
+            # Escape user input to prevent AppleScript injection
+            date_str = escape_applescript_string(match.group(1))
+            return f'date "{date_str}"'
 
         # Default: no due date
         return "missing value"
@@ -103,6 +105,11 @@ class RemindersSkill(RoxySkill):
         Returns:
             True if reminder created successfully.
         """
+        # Escape all user input to prevent AppleScript injection
+        title_safe = escape_applescript_string(title)
+        list_name_safe = escape_applescript_string(list_name)
+        notes_safe = escape_applescript_string(notes) if notes else ""
+
         # Build due date clause
         if due_date and due_date != "missing value":
             due_clause = f"due date:{due_date}"
@@ -111,15 +118,15 @@ class RemindersSkill(RoxySkill):
 
         # Build notes clause
         if notes:
-            notes_clause = f', body:"{notes}"'
+            notes_clause = f', body:"{notes_safe}"'
         else:
             notes_clause = ""
 
         script = f"""
         tell application "Reminders"
             activate
-            tell list "{list_name}"
-                set newReminder to make new reminder with properties {{name:"{title}"{notes_clause}}}
+            tell list "{list_name_safe}"
+                set newReminder to make new reminder with properties {{name:"{title_safe}"{notes_clause}}}
                 {due_clause}
             end tell
         end tell
@@ -142,10 +149,13 @@ class RemindersSkill(RoxySkill):
         Returns:
             List of reminder dicts with name, due_date, completed status.
         """
+        # Escape user input to prevent AppleScript injection
+        list_name_safe = escape_applescript_string(list_name)
+
         script = f"""
         tell application "Reminders"
             activate
-            tell list "{list_name}"
+            tell list "{list_name_safe}"
                 set allReminders to every reminder
 
                 set reminderList to {{}}
@@ -168,15 +178,7 @@ class RemindersSkill(RoxySkill):
                 return my joinList(reminderList, ";;;")
             end tell
         end tell
-
-        on joinList(lst, delimiter)
-            set out to ""
-            repeat with itemNum from 1 to count of lst
-                if itemNum > 1 then set out to out & delimiter
-                set out to out & item itemNum of lst
-            end repeat
-            return out
-        end joinList
+{get_joinlist_handler()}
         """
 
         try:

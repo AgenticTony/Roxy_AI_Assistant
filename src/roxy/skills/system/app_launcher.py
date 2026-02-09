@@ -179,10 +179,11 @@ class AppLauncherSkill(RoxySkill):
 
         # Method 3: Try AppleScript
         try:
-            from roxy.macos.applescript import get_applescript_runner
+            from roxy.macos.applescript import escape_applescript_string, get_applescript_runner
 
             runner = get_applescript_runner()
-            script = f'tell application "{app_name}" to activate'
+            app_name_safe = escape_applescript_string(app_name)
+            script = f'tell application "{app_name_safe}" to activate'
             await runner.run(script)
             return True
         except Exception as e:

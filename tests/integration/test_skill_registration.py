@@ -51,7 +51,7 @@ class ConflictingSkill(RoxySkill):
         return SkillResult(success=True, response_text="Conflict executed")
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_register_and_list(mock_config: RoxyConfig) -> None:
     """Test that skills can be registered and listed."""
     registry = SkillRegistry()
@@ -70,7 +70,7 @@ async def test_skill_register_and_list(mock_config: RoxyConfig) -> None:
     assert "test_skill_2" in skill_names
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_find_by_trigger(mock_config: RoxyConfig) -> None:
     """Test that skills can be found by trigger phrases."""
     registry = SkillRegistry()
@@ -87,7 +87,7 @@ async def test_skill_find_by_trigger(mock_config: RoxyConfig) -> None:
     assert confidence > 0.5
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_confidence_scoring(mock_config: RoxyConfig) -> None:
     """Test that confidence scores are calculated correctly."""
     registry = SkillRegistry()
@@ -109,7 +109,7 @@ async def test_skill_confidence_scoring(mock_config: RoxyConfig) -> None:
     assert conf3 < 0.3
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_get_by_name(mock_config: RoxyConfig) -> None:
     """Test that skills can be retrieved by name."""
     registry = SkillRegistry()
@@ -126,7 +126,7 @@ async def test_skill_get_by_name(mock_config: RoxyConfig) -> None:
     assert isinstance(skill, TestSkill1)
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_unregister(mock_config: RoxyConfig) -> None:
     """Test that skills can be unregistered."""
     registry = SkillRegistry()
@@ -147,7 +147,7 @@ async def test_skill_unregister(mock_config: RoxyConfig) -> None:
     assert skill is not None
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_discovery_from_directory(mock_config: RoxyConfig) -> None:
     """Test that skills can be auto-discovered from a directory."""
     registry = SkillRegistry()
@@ -164,7 +164,7 @@ async def test_skill_discovery_from_directory(mock_config: RoxyConfig) -> None:
         assert len(skills) > 0
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_execution_via_registry(mock_config: RoxyConfig) -> None:
     """Test that skills can be executed through the registry."""
     registry = SkillRegistry()
@@ -193,7 +193,7 @@ async def test_skill_execution_via_registry(mock_config: RoxyConfig) -> None:
     assert "Test 1 executed" in result.response_text
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_permissions_checking(mock_config: RoxyConfig) -> None:
     """Test that skill permissions are properly declared."""
     registry = SkillRegistry()
@@ -210,7 +210,7 @@ async def test_skill_permissions_checking(mock_config: RoxyConfig) -> None:
     assert Permission.NETWORK in skill2.permissions
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_duplicate_registration(mock_config: RoxyConfig) -> None:
     """Test behavior when registering skills with duplicate names."""
     registry = SkillRegistry()
@@ -232,7 +232,7 @@ async def test_skill_duplicate_registration(mock_config: RoxyConfig) -> None:
         pass
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_registry_reset(mock_config: RoxyConfig) -> None:
     """Test that the registry can be reset."""
     registry = SkillRegistry()
@@ -250,7 +250,7 @@ async def test_registry_reset(mock_config: RoxyConfig) -> None:
     assert len(registry.list_skills()) == 0
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_skill_metadata_storage(mock_config: RoxyConfig) -> None:
     """Test that skill metadata is properly stored."""
     registry = SkillRegistry()
@@ -270,4 +270,4 @@ async def test_skill_metadata_storage(mock_config: RoxyConfig) -> None:
 
 
 # Async test marker
-pytest_asyncio = pytest.mark.asyncio
+# Note: Using @pytest.mark.asyncio decorator directly

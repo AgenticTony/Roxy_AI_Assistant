@@ -182,12 +182,23 @@ class FileSearchSkill(RoxySkill):
         import subprocess
 
         try:
+            # Validate the file path before opening
+            from roxy.macos.path_validation import validate_path
+
+            validated_path = validate_path(file_path, must_exist=True)
+
             result = subprocess.run(
-                ["open", file_path],
+                ["open", str(validated_path)],
                 capture_output=True,
                 text=True,
             )
             return result.returncode == 0
+        except FileNotFoundError:
+            logger.error(f"File not found: {file_path}")
+            return False
+        except ValueError as e:
+            logger.error(f"Invalid file path '{file_path}': {e}")
+            return False
         except Exception as e:
             logger.error(f"Error opening file {file_path}: {e}")
             return False

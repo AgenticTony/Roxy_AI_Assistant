@@ -7,14 +7,88 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Protocol, TYPE_CHECKING
+from functools import wraps
+from typing import Any, Callable, Protocol, TYPE_CHECKING
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from roxy.brain.llm_clients import LLMClient
     from roxy.config import RoxyConfig
+
+
+# Hook types for lifecycle events
+class HookType(str, Enum):
+    """Types of skill lifecycle hooks."""
+
+    BEFORE_EXECUTE = "before_execute"
+    AFTER_EXECUTE = "after_execute"
+
+
+# Hook function signature - use string for forward reference
+HookFunction = Callable[[str, "SkillContext"], None]
+
+
+# Global hook registry - stores hooks registered for each hook type
+class _HookRegistry:
+    """Global registry for skill lifecycle hooks.
+
+    Hooks are stored per-skill-name and per-hook-type.
+    """
+
+    def __init__(self) -> None:
+        self._hooks: dict[tuple[str, HookType], list[HookFunction]] = defaultdict(list)
+
+    def register(self, skill_name: str, hook_type: HookType, hook_fn: HookFunction) -> None:
+        """Register a hook function for a specific skill and hook type.
+
+        Args:
+            skill_name: Name of the skill ("*" for all skills).
+            hook_type: Type of hook to register for.
+            hook_fn: Function to call when hook is triggered.
+        """
+        key = (skill_name, hook_type)
+        self._hooks[key].append(hook_fn)
+        logger.debug(f"Registered {hook_type.value} hook for skill '{skill_name}': {hook_fn.__name__}")
+
+    def get_hooks(self, skill_name: str, hook_type: HookType) -> list[HookFunction]:
+        """Get all hooks for a specific skill and hook type.
+
+        Args:
+            skill_name: Name of the skill.
+            hook_type: Type of hook to get.
+
+        Returns:
+            List of hook functions, including global hooks (registered with "*").
+        """
+        hooks = []
+        # Add global hooks first (registered with "*")
+        global_key = ("*", hook_type)
+        hooks.extend(self._hooks.get(global_key, []))
+        # Add skill-specific hooks
+        specific_key = (skill_name, hook_type)
+        hooks.extend(self._hooks.get(specific_key, []))
+        return hooks
+
+    def clear(self, skill_name: str | None = None) -> None:
+        """Clear hooks for a skill or all hooks.
+
+        Args:
+            skill_name: Name of skill to clear hooks for. If None, clears all.
+        """
+        if skill_name is None:
+            self._hooks.clear()
+        else:
+            keys_to_remove = [k for k in self._hooks if k[0] == skill_name]
+            for key in keys_to_remove:
+                del self._hooks[key]
+
+
+# Global hook registry instance
+_hook_registry = _HookRegistry()
 
 
 class Permission(str, Enum):
@@ -49,6 +123,11 @@ class SkillContext:
     memory: "MemoryManager"
     config: "RoxyConfig"
     conversation_history: list[dict] = field(default_factory=list)
+    local_llm_client: "LLMClient | None" = None
+
+    # Hook execution metadata (populated during execution)
+    skill_name: str | None = None
+    hook_metadata: dict[str, Any] = field(default_factory=dict)
 
     def get_history(self, limit: int = 10) -> list[dict]:
         """Get recent conversation history."""
@@ -57,6 +136,22 @@ class SkillContext:
     def add_to_history(self, role: str, content: str) -> None:
         """Add a message to conversation history."""
         self.conversation_history.append({"role": role, "content": content})
+
+    def _run_hooks(self, hook_type: HookType) -> None:
+        """Run all registered hooks for this skill and hook type.
+
+        Args:
+            hook_type: Type of hook to run.
+        """
+        if self.skill_name is None:
+            return
+
+        hooks = _hook_registry.get_hooks(self.skill_name, hook_type)
+        for hook_fn in hooks:
+            try:
+                hook_fn(self.skill_name, self)
+            except Exception as e:
+                logger.error(f"Hook {hook_fn.__name__} failed: {e}", exc_info=True)
 
 
 @dataclass
@@ -218,6 +313,48 @@ class RoxySkill(ABC):
         if not self.name:
             raise ValueError(f"{self.__class__.__name__} must define a 'name' attribute")
 
+    def before_execute(self, context: SkillContext) -> None:
+        """
+        Lifecycle hook called before skill execution.
+
+        Override this method to implement pre-execution logic like:
+        - Validation checks
+        - Resource initialization
+        - Logging
+        - Permission checks
+
+        Args:
+            context: SkillContext with user input and dependencies.
+
+        Note:
+            This is a synchronous method. For async operations,
+            use the registered hooks via register_hook() instead.
+        """
+        pass
+
+    def after_execute(self, context: SkillContext, result: SkillResult) -> SkillResult:
+        """
+        Lifecycle hook called after skill execution.
+
+        Override this method to implement post-execution logic like:
+        - Result transformation
+        - Cleanup
+        - Metrics collection
+        - Response enrichment
+
+        Args:
+            context: SkillContext with user input and dependencies.
+            result: The SkillResult returned by execute().
+
+        Returns:
+            SkillResult (may be modified from the input result).
+
+        Note:
+            This is a synchronous method. For async operations,
+            use the registered hooks via register_hook() instead.
+        """
+        return result
+
     @abstractmethod
     async def execute(self, context: SkillContext) -> SkillResult:
         """
@@ -278,5 +415,115 @@ class RoxySkill(ABC):
         """
         return all(p in granted_permissions for p in self.permissions)
 
+    async def _execute_with_hooks(self, context: SkillContext) -> SkillResult:
+        """
+        Execute the skill with lifecycle hooks.
+
+        This method:
+        1. Sets the skill name in context
+        2. Calls before_execute hooks (instance method + registered)
+        3. Calls execute()
+        4. Calls after_execute hooks (instance method + registered)
+
+        Args:
+            context: SkillContext with user input and dependencies.
+
+        Returns:
+            SkillResult with response and status.
+        """
+        # Set skill name in context for hooks
+        context.skill_name = self.name
+
+        # Run before_execute hooks
+        self.before_execute(context)
+        context._run_hooks(HookType.BEFORE_EXECUTE)
+
+        # Execute the skill
+        result = await self.execute(context)
+
+        # Run after_execute hooks (allow modification)
+        result = self.after_execute(context, result)
+        context.hook_metadata["result"] = result
+        context._run_hooks(HookType.AFTER_EXECUTE)
+
+        return result
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name={self.name})"
+
+
+# Public API for hook registration
+def register_hook(
+    skill_name: str,
+    hook_type: HookType,
+    hook_fn: HookFunction | None = None,
+) -> Callable[[HookFunction], HookFunction] | None:
+    """
+    Register a lifecycle hook for a skill.
+
+    Can be used as a decorator or as a function.
+
+    Args:
+        skill_name: Name of the skill to register hook for. Use "*" for all skills.
+        hook_type: Type of hook (BEFORE_EXECUTE or AFTER_EXECUTE).
+        hook_fn: Optional hook function. If None, returns a decorator.
+
+    Returns:
+        If hook_fn is None, returns a decorator function.
+        Otherwise, returns None.
+
+    Examples:
+        # As a decorator
+        @register_hook("app_launcher", HookType.BEFORE_EXECUTE)
+        def log_app_launch(skill_name: str, context: SkillContext) -> None:
+            logger.info(f"Launching app: {context.user_input}")
+
+        # As a function
+        def log_app_launch(skill_name: str, context: SkillContext) -> None:
+            logger.info(f"Launching app: {context.user_input}")
+        register_hook("app_launcher", HookType.BEFORE_EXECUTE, log_app_launch)
+
+        # Global hook (runs for all skills)
+        @register_hook("*", HookType.AFTER_EXECUTE)
+        def track_all_skill_executions(skill_name: str, context: SkillContext) -> None:
+            metrics.track_skill_execution(skill_name)
+    """
+    def decorator(fn: HookFunction) -> HookFunction:
+        _hook_registry.register(skill_name, hook_type, fn)
+        return fn
+
+    if hook_fn is not None:
+        _hook_registry.register(skill_name, hook_type, hook_fn)
+        return None
+    return decorator
+
+
+def clear_hooks(skill_name: str | None = None) -> None:
+    """
+    Clear hooks for a specific skill or all hooks.
+
+    Args:
+        skill_name: Name of skill to clear hooks for. If None, clears all hooks.
+
+    Examples:
+        # Clear hooks for a specific skill
+        clear_hooks("app_launcher")
+
+        # Clear all hooks
+        clear_hooks()
+    """
+    _hook_registry.clear(skill_name)
+
+
+def get_hooks(skill_name: str, hook_type: HookType) -> list[HookFunction]:
+    """
+    Get all registered hooks for a skill and hook type.
+
+    Args:
+        skill_name: Name of the skill.
+        hook_type: Type of hook to get.
+
+    Returns:
+        List of hook functions.
+    """
+    return _hook_registry.get_hooks(skill_name, hook_type)

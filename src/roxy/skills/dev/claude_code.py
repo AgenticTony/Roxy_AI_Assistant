@@ -134,11 +134,16 @@ class ClaudeCodeSkill(RoxySkill):
                 subprocess.run([editor, str(path)], check=True)
             elif editor == "vim":
                 # VIM requires terminal, so open in terminal
+                # Import the escape function to prevent AppleScript injection
+                from roxy.macos.applescript import escape_applescript_string
+
+                terminal_safe = escape_applescript_string(self.TERMINAL_APP)
+                path_safe = escape_applescript_string(str(path))
                 subprocess.run([
                     "osascript",
                     "-e",
-                    f'tell application "{self.TERMINAL_APP}"\n'
-                    f'  do script "cd \\"{path}\\" && vim"\n'
+                    f'tell application "{terminal_safe}"\n'
+                    f'  do script "cd \\"{path_safe}\\" && vim"\n'
                     f'end tell'
                 ])
             else:

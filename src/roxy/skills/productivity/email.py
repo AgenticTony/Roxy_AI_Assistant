@@ -10,7 +10,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.macos.applescript import get_applescript_runner
+from roxy.macos.applescript import escape_applescript_string, get_applescript_runner, get_joinlist_handler
 
 logger = logging.getLogger(__name__)
 
@@ -84,15 +84,7 @@ class EmailSkill(RoxySkill):
 
             return my joinList(messageList, ";;;")
         end tell
-
-        on joinList(lst, delimiter)
-            set out to ""
-            repeat with itemNum from 1 to count of lst
-                if itemNum > 1 then set out to out & delimiter
-                set out to out & item itemNum of lst
-            end repeat
-            return out
-        end joinList
+{get_joinlist_handler()}
         """
 
         try:
@@ -127,9 +119,10 @@ class EmailSkill(RoxySkill):
         Returns:
             Email dict with subject, sender, date, body.
         """
+        message_id_safe = escape_applescript_string(message_id)
         script = f"""
         tell application "Mail"
-            set msg to first message whose message id is "{message_id}"
+            set msg to first message whose message id is "{message_id_safe}"
 
             set emailContent to {{}}
             set end of emailContent to subject of msg
@@ -139,15 +132,7 @@ class EmailSkill(RoxySkill):
 
             return my joinList(emailContent, "|||")
         end tell
-
-        on joinList(lst, delimiter)
-            set out to ""
-            repeat with itemNum from 1 to count of lst
-                if itemNum > 1 then set out to out & delimiter
-                set out to out & item itemNum of lst
-            end repeat
-            return out
-        end joinList
+{get_joinlist_handler()}
         """
 
         try:
@@ -171,10 +156,11 @@ class EmailSkill(RoxySkill):
             logger.error(f"Error getting email content: {e}")
             return {}
 
-    async def summarize_email(self, message_id: str) -> str:
+    async def summarize_email(self, context: SkillContext, message_id: str) -> str:
         """Summarize an email using local LLM.
 
         Args:
+            context: SkillContext with access to local LLM client.
             message_id: Email message ID.
 
         Returns:
@@ -191,14 +177,57 @@ class EmailSkill(RoxySkill):
         # Get the email body for summary
         content = email.get("body", "")
 
-        # For now, return a simple summary
-        # TODO: Integrate with local LLM for better summaries
+        # Try to use local LLM for email summarization
+        if context.local_llm_client is not None and content:
+            try:
+                # Prepare prompt for email summarization
+                prompt = f"""Summarize the following email concisely.
+
+From: {email.get('sender', 'Unknown')}
+Subject: {email.get('subject', 'No Subject')}
+Date: {email.get('date', 'Unknown')}
+
+Email Content:
+```
+{content[:3000]}
+```
+
+Provide a brief summary (2-3 sentences) covering:
+1. Who sent the email
+2. The main topic or purpose
+3. Any key action items or deadlines
+
+Format the response in a clear, readable way:"""
+
+                response = await context.local_llm_client.generate(
+                    prompt=prompt,
+                    temperature=0.5,  # Moderate temperature for balanced summarization
+                    max_tokens=200,
+                )
+
+                # Validate that we got a reasonable summary
+                summary = response.content.strip()
+                if summary and len(summary) > 20:
+                    logger.info(f"Generated email summary using LLM for message {message_id}")
+                    return f"""From: {email.get('sender', 'Unknown')}
+Subject: {email.get('subject', 'No Subject')}
+Date: {email.get('date', 'Unknown')}
+
+{summary}"""
+                else:
+                    logger.warning(f"LLM returned invalid summary, falling back to simple format")
+
+            except Exception as e:
+                logger.error(f"Error generating email summary with LLM: {e}")
+                # Fall through to simple format
+
+        # Fallback to simple email display
         lines = [
             f"From: {email.get('sender', 'Unknown')}",
             f"Subject: {email.get('subject', 'No Subject')}",
             f"Date: {email.get('date', 'Unknown')}",
             "",
-            "Summary available (would use local LLM for full summary)",
+            "(Email content available - local LLM integration for summarization)",
         ]
 
         return "\n".join(lines)
@@ -229,7 +258,7 @@ class EmailSkill(RoxySkill):
             emails = await self.get_latest_emails(1)
 
             if emails:
-                summary = await self.summarize_email(emails[0]["message_id"])
+                summary = await self.summarize_email(context, emails[0]["message_id"])
                 return SkillResult(
                     success=True,
                     response_text=summary,

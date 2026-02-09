@@ -25,7 +25,7 @@ def privacy_config(temp_dir: Path) -> PrivacyConfig:
     )
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_pii_email_detection(privacy_config: PrivacyConfig) -> None:
     """Test that email addresses are detected."""
     gateway = PrivacyGateway(
@@ -41,7 +41,7 @@ async def test_pii_email_detection(privacy_config: PrivacyConfig) -> None:
     assert "john.doe@example.com" in detected["email"]
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_pii_phone_detection(privacy_config: PrivacyConfig) -> None:
     """Test that phone numbers are detected."""
     gateway = PrivacyGateway(
@@ -57,7 +57,7 @@ async def test_pii_phone_detection(privacy_config: PrivacyConfig) -> None:
     assert len(detected["phone"]) > 0
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_pii_ssn_detection(privacy_config: PrivacyConfig) -> None:
     """Test that SSNs are detected."""
     gateway = PrivacyGateway(
@@ -73,7 +73,7 @@ async def test_pii_ssn_detection(privacy_config: PrivacyConfig) -> None:
     assert len(detected["ssn"]) > 0
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_pii_redaction(privacy_config: PrivacyConfig) -> None:
     """Test that PII is redacted from text."""
     gateway = PrivacyGateway(
@@ -92,7 +92,7 @@ async def test_pii_redaction(privacy_config: PrivacyConfig) -> None:
     assert "[PHONE_REDACTED]" in redacted or "PII_REDACTED" in redacted
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_cloud_consent_always(privacy_config: PrivacyConfig) -> None:
     """Test cloud consent mode 'always'."""
     gateway = PrivacyGateway(
@@ -106,7 +106,7 @@ async def test_cloud_consent_always(privacy_config: PrivacyConfig) -> None:
     assert approved is True
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_cloud_consent_never(privacy_config: PrivacyConfig) -> None:
     """Test cloud consent mode 'never'."""
     gateway = PrivacyGateway(
@@ -120,7 +120,7 @@ async def test_cloud_consent_never(privacy_config: PrivacyConfig) -> None:
     assert approved is False
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_cloud_consent_ask(privacy_config: PrivacyConfig) -> None:
     """Test cloud consent mode 'ask'."""
     gateway = PrivacyGateway(
@@ -139,7 +139,7 @@ async def test_cloud_consent_ask(privacy_config: PrivacyConfig) -> None:
         assert approved is not None
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_cloud_request_logging(privacy_config: PrivacyConfig) -> None:
     """Test that cloud requests are logged."""
     log_path = str(tempfile.gettempdir()) + "/test_cloud_requests.log"
@@ -159,7 +159,7 @@ async def test_cloud_request_logging(privacy_config: PrivacyConfig) -> None:
     assert os.path.exists(log_path) or True  # May not exist in test env
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_privacy_gateway_full_flow(privacy_config: PrivacyConfig) -> None:
     """Test full privacy gateway flow with PII redaction."""
     gateway = PrivacyGateway(
@@ -183,7 +183,7 @@ async def test_privacy_gateway_full_flow(privacy_config: PrivacyConfig) -> None:
     assert len(redacted) > 0
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_privacy_disabled(privacy_config: PrivacyConfig) -> None:
     """Test behavior when privacy redaction is disabled."""
     gateway = PrivacyGateway(
@@ -201,7 +201,7 @@ async def test_privacy_disabled(privacy_config: PrivacyConfig) -> None:
     assert not detected or len(detected) == 0
 
 
-@pytest_asyncio
+@pytest.mark.asyncio
 async def test_multiple_pii_types(privacy_config: PrivacyConfig) -> None:
     """Test detection of multiple PII types in one text."""
     gateway = PrivacyGateway(
@@ -245,4 +245,4 @@ PrivacyGateway._log_cloud_request = lambda self, *args: None  # Mock
 
 
 # Async test marker
-pytest_asyncio = pytest.mark.asyncio
+# Note: Using @pytest.mark.asyncio decorator directly
