@@ -181,9 +181,10 @@ class CalendarSkill(RoxySkill):
             True if event created successfully.
         """
         if end_date is None:
-            # Default to 1 hour duration - start_date may be user input
-            # but is expected to be an AppleScript date expression
-            end_date = f'date "{escape_applescript_string(start_date)}" + 1 * hours'
+            # Default to 1 hour duration - start_date is expected to be
+            # an AppleScript date expression (e.g., "Monday at 2pm", current date)
+            # so we use it directly without escaping
+            end_date = f'{start_date} + 1 * hours'
 
         # Escape all user input to prevent AppleScript injection
         title_safe = escape_applescript_string(title)

@@ -363,7 +363,7 @@ class MCPServerManager:
         tools = []
         request_id = 0
 
-        def _send_request(method: str, params: dict | None = None) -> None:
+        async def _send_request(method: str, params: dict | None = None) -> None:
             """Send a JSON-RPC request to the server."""
             nonlocal request_id
             request_id += 1
@@ -374,13 +374,13 @@ class MCPServerManager:
                 "params": params or {},
             }
             message = json.dumps(request) + "\n"
-            connection.process.stdin.write(message.encode())
-            connection.process.stdin.drain()
+            await connection.process.stdin.write(message.encode())
+            await connection.process.stdin.drain()
 
-        def _read_response(timeout: float = 5.0) -> dict | None:
+        async def _read_response(timeout: float = 5.0) -> dict | None:
             """Read a JSON-RPC response from the server."""
             try:
-                line = asyncio.wait_for(
+                line = await asyncio.wait_for(
                     connection.process.stdout.readline(),
                     timeout=timeout,
                 )
@@ -397,7 +397,7 @@ class MCPServerManager:
         try:
             # Send initialize request
             logger.debug(f"Initializing MCP server {connection.name}")
-            _send_request("initialize", {
+            await _send_request("initialize", {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
                 "clientInfo": {
@@ -407,7 +407,7 @@ class MCPServerManager:
             })
 
             # Read initialize response
-            init_response = _read_response()
+            init_response = await _read_response()
             if not init_response:
                 logger.warning(f"No initialize response from {connection.name}")
                 return connection.config.tools
@@ -417,14 +417,14 @@ class MCPServerManager:
                 return connection.config.tools
 
             # Send initialized notification
-            _send_request("notifications/initialized")
+            await _send_request("notifications/initialized")
 
             # Request tools list
             logger.debug(f"Requesting tools from {connection.name}")
-            _send_request("tools/list")
+            await _send_request("tools/list")
 
             # Read tools response
-            tools_response = _read_response(timeout=10.0)
+            tools_response = await _read_response(timeout=10.0)
             if not tools_response:
                 logger.warning(f"No tools response from {connection.name}")
                 return connection.config.tools
@@ -870,7 +870,7 @@ class MCPServerManager:
 
         request_id = 0
 
-        def _send_request(method: str, params: dict | None = None) -> None:
+        async def _send_request(method: str, params: dict | None = None) -> None:
             """Send a JSON-RPC request to the server."""
             nonlocal request_id
             request_id += 1
@@ -881,13 +881,13 @@ class MCPServerManager:
                 "params": params or {},
             }
             message = json.dumps(request) + "\n"
-            connection.process.stdin.write(message.encode())
-            connection.process.stdin.drain()
+            await connection.process.stdin.write(message.encode())
+            await connection.process.stdin.drain()
 
-        def _read_response(timeout: float = 30.0) -> dict | None:
+        async def _read_response(timeout: float = 30.0) -> dict | None:
             """Read a JSON-RPC response from the server."""
             try:
-                line = asyncio.wait_for(
+                line = await asyncio.wait_for(
                     connection.process.stdout.readline(),
                     timeout=timeout,
                 )
@@ -904,13 +904,13 @@ class MCPServerManager:
         try:
             # Send tools/call request
             logger.debug(f"Calling tool {tool} on {connection.name}")
-            _send_request("tools/call", {
+            await _send_request("tools/call", {
                 "name": tool,
                 "arguments": args,
             })
 
             # Read response
-            response = _read_response(timeout=60.0)
+            response = await _read_response(timeout=60.0)
             if not response:
                 return ToolCallResult(
                     success=False,
