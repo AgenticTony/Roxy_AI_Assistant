@@ -1,0 +1,54 @@
+# Roxy Default Configuration
+
+roxy:
+  name: "Roxy"
+  version: "0.1.0"
+
+llm:
+  local:
+    model: "qwen3:8b"
+    router_model: "qwen3:0.6b"
+    temperature: 0.7
+    max_tokens: 2048
+
+  cloud:
+    provider: "zai"              # zai | openrouter
+    model: "glm-4.7"
+    confidence_threshold: 0.7    # Below this → escalate to cloud
+
+memory:
+  session_max_messages: 50
+  history_db: "data/memory.db"
+  chromadb_path: "data/chromadb"
+
+  mem0_config:
+    llm_provider: "ollama"
+    llm_model: "qwen3:8b"
+    embedder_provider: "ollama"
+    embedder_model: "nomic-embed-text"
+
+voice:
+  stt_model: "base.en"          # whisper model size
+  tts_engine: "kokoro"
+  tts_voice: "af_heart"         # Kokoro voice ID
+  tts_speed: 1.1
+  wake_word_sensitivity: 0.6
+  speak_responses: true
+
+  # Wake word detection configuration
+  wake_word:
+    backend: "auto"             # auto | porcupine | openwakeword | whisper
+    wake_phrase: "hey roxy"
+    sensitivity: 0.6              # 0.0 (least sensitive) to 1.0 (most sensitive)
+    porcupine_access_key: ""      # Get free key from https://console.picovoice.ai
+    model_name: "hey_roxy"        # For OpenWakeWord backend
+
+privacy:
+  redact_patterns:
+    - email
+    - phone
+    - ssn
+    - credit_card
+    - address
+  cloud_consent: "ask"           # ask | always | never
+  log_cloud_requests: true

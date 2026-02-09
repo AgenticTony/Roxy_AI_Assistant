@@ -1,0 +1,120 @@
+# MCP Server Configuration for Roxy
+# All MCP servers that Roxy can connect to for external tools and data
+
+# Pre-configured servers (Anthony already has these set up)
+servers:
+  brave_search:
+    name: "Brave Search"
+    description: "Web search using Brave Search API"
+    enabled: true
+    transport: "sse"  # Server-Sent Events for HTTP-based MCP
+    url: "https://search.brave.com/mcp"
+    # Environment variable: BRAVE_SEARCH_API_KEY required
+    tools:
+      - name: "brave_web_search"
+        description: "Search the web using Brave Search"
+      - name: "brave_news_search"
+        description: "Search news articles using Brave Search"
+
+  firecrawl:
+    name: "Firecrawl"
+    description: "Web scraping and crawling with clean output"
+    enabled: true
+    transport: "sse"
+    url: "https://api.firecrawl.dev/mcp"
+    # Environment variable: FIRECRAWL_API_KEY required
+    tools:
+      - name: "scrape_url"
+        description: "Scrape a single URL and return content"
+      - name: "crawl_website"
+        description: "Crawl multiple pages from a website"
+      - name: "map_website"
+        description: "Discover all URLs on a website"
+      - name: "search_web"
+        description: "Search and scrape search results"
+
+  github:
+    name: "GitHub"
+    description: "GitHub repository operations"
+    enabled: true
+    transport: "sse"
+    url: "https://github.com/mcp-server"
+    # Environment variable: GITHUB_TOKEN required
+    tools:
+      - name: "create_repository"
+        description: "Create a new GitHub repository"
+      - name: "get_file_contents"
+        description: "Get contents of a file in a repository"
+      - name: "search_repositories"
+        description: "Search GitHub repositories"
+      - name: "create_issue"
+        description: "Create an issue in a repository"
+
+  dart:
+    name: "Dart Task Management"
+    description: "Task and project management via Dart"
+    enabled: true
+    transport: "stdio"
+    command: "dart"
+    args: ["mcp-server"]
+    # Requires Dart MCP server to be installed locally
+    tools:
+      - name: "create_task"
+        description: "Create a new task"
+      - name: "list_tasks"
+        description: "List all tasks"
+      - name: "update_task"
+        description: "Update an existing task"
+
+# Custom Roxy servers (built into Roxy itself)
+custom_servers:
+  roxy_system:
+    name: "Roxy System"
+    description: "Internal Roxy system operations and data access"
+    enabled: true
+    transport: "stdio"
+    module: "roxy.mcp.custom.roxy_system"
+    tools:
+      - name: "roxy_search_memory"
+        description: "Search Roxy's conversation memory"
+      - name: "roxy_system_status"
+        description: "Get Roxy system status and health"
+      - name: "roxy_search_files"
+        description: "Search local files using Spotlight"
+
+# Fallback/backup servers
+fallback_servers:
+  searxng:
+    name: "SearXNG"
+    description: "Local privacy-focused search (Docker container required)"
+    enabled: false  # Disabled by default, enable via setup script
+    transport: "http"
+    url: "http://localhost:8888"
+    health_check: "http://localhost:8888/health"
+    tools:
+      - name: "search"
+        description: "Search the web using SearXNG"
+
+# Server startup configuration
+startup:
+  # Start these servers automatically when Roxy starts
+  auto_start:
+    - "brave_search"
+    - "firecrawl"
+    - "roxy_system"
+
+  # Start these servers on-demand when a skill needs them
+  on_demand:
+    - "github"
+    - "dart"
+    - "searxng"
+
+# Connection timeouts and retries
+timeouts:
+  connection: 10  # seconds to establish connection
+  request: 30     # seconds for tool execution
+  health_check: 5 # seconds for health check
+
+retries:
+  max_attempts: 3
+  backoff: 1.0    # seconds between retries
