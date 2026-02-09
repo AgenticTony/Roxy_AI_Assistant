@@ -18,6 +18,13 @@ import yaml
 from mcp import ClientSession, types
 from mcp.client.sse import sse_client
 
+# Try to import aiohttp for HTTP health checks
+try:
+    import aiohttp
+    HAS_AIOHTTP = True
+except ImportError:
+    HAS_AIOHTTP = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -322,9 +329,8 @@ class MCPServerManager:
                         f"Server process exited with code {process.returncode}: {stderr_output}"
                     )
 
-                # TODO: Send initialize message and retrieve tools dynamically
-                # For now, use predefined tools from config
-                connection.tools = config.tools
+                # Send initialize message and retrieve tools dynamically
+                connection.tools = await self._discover_stdio_tools(connection)
 
                 logger.info(f"Started stdio server {connection.name} (PID: {process.pid})")
 
@@ -336,6 +342,114 @@ class MCPServerManager:
             raise ValueError(
                 f"STDIO server {connection.name} has neither module nor command"
             )
+
+    async def _discover_stdio_tools(self, connection: ServerConnection) -> list[dict]:
+        """Discover available tools from a stdio MCP server via JSON-RPC.
+
+        Sends initialize and tools/list requests to the server process.
+
+        Args:
+            connection: ServerConnection with running process.
+
+        Returns:
+            List of tool dictionaries with name and description.
+        """
+        import json
+
+        if not connection.process or not connection.process.stdin:
+            logger.warning(f"Cannot discover tools for {connection.name}: no stdin")
+            return connection.config.tools
+
+        tools = []
+        request_id = 0
+
+        def _send_request(method: str, params: dict | None = None) -> None:
+            """Send a JSON-RPC request to the server."""
+            nonlocal request_id
+            request_id += 1
+            request = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": method,
+                "params": params or {},
+            }
+            message = json.dumps(request) + "\n"
+            connection.process.stdin.write(message.encode())
+            connection.process.stdin.drain()
+
+        def _read_response(timeout: float = 5.0) -> dict | None:
+            """Read a JSON-RPC response from the server."""
+            try:
+                line = asyncio.wait_for(
+                    connection.process.stdout.readline(),
+                    timeout=timeout,
+                )
+                if not line:
+                    return None
+                return json.loads(line.decode())
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout reading response from {connection.name}")
+                return None
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse JSON-RPC response: {e}")
+                return None
+
+        try:
+            # Send initialize request
+            logger.debug(f"Initializing MCP server {connection.name}")
+            _send_request("initialize", {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "roxy",
+                    "version": "0.1.0",
+                },
+            })
+
+            # Read initialize response
+            init_response = _read_response()
+            if not init_response:
+                logger.warning(f"No initialize response from {connection.name}")
+                return connection.config.tools
+
+            if "error" in init_response:
+                logger.warning(f"Initialize error from {connection.name}: {init_response['error']}")
+                return connection.config.tools
+
+            # Send initialized notification
+            _send_request("notifications/initialized")
+
+            # Request tools list
+            logger.debug(f"Requesting tools from {connection.name}")
+            _send_request("tools/list")
+
+            # Read tools response
+            tools_response = _read_response(timeout=10.0)
+            if not tools_response:
+                logger.warning(f"No tools response from {connection.name}")
+                return connection.config.tools
+
+            if "error" in tools_response:
+                logger.warning(f"Tools list error from {connection.name}: {tools_response['error']}")
+                return connection.config.tools
+
+            # Parse tools from response
+            result = tools_response.get("result", {})
+            tools_list = result.get("tools", [])
+
+            for tool in tools_list:
+                tools.append({
+                    "name": tool.get("name", ""),
+                    "description": tool.get("description", ""),
+                    "inputSchema": tool.get("inputSchema", {}),
+                })
+
+            logger.info(f"Discovered {len(tools)} tools from {connection.name}")
+            return tools
+
+        except Exception as e:
+            logger.warning(f"Failed to discover tools from {connection.name}: {e}")
+            return connection.config.tools
 
     async def _start_http_server(self, connection: ServerConnection) -> None:
         """Connect to an HTTP/SSE-based MCP server.
@@ -724,13 +838,139 @@ class MCPServerManager:
                 )
 
         # For external process servers - use JSON-RPC over stdin/stdout
-        # TODO: Implement proper JSON-RPC communication
-        return ToolCallResult(
-            success=False,
-            error="External process tool calls not yet implemented",
-            server=connection.name,
-            tool=tool,
-        )
+        return await self._call_stdio_process_tool(connection, tool, args)
+
+    async def _call_stdio_process_tool(
+        self,
+        connection: ServerConnection,
+        tool: str,
+        args: dict[str, Any],
+    ) -> ToolCallResult:
+        """Call a tool on an external stdio MCP server process via JSON-RPC.
+
+        Sends a JSON-RPC request to the server process and reads the response.
+
+        Args:
+            connection: Active server connection with running process.
+            tool: Tool name to call.
+            args: Tool arguments.
+
+        Returns:
+            ToolCallResult with success status and data.
+        """
+        import json
+
+        if not connection.process or not connection.process.stdin:
+            return ToolCallResult(
+                success=False,
+                error="Server process not available or stdin not accessible",
+                server=connection.name,
+                tool=tool,
+            )
+
+        request_id = 0
+
+        def _send_request(method: str, params: dict | None = None) -> None:
+            """Send a JSON-RPC request to the server."""
+            nonlocal request_id
+            request_id += 1
+            request = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": method,
+                "params": params or {},
+            }
+            message = json.dumps(request) + "\n"
+            connection.process.stdin.write(message.encode())
+            connection.process.stdin.drain()
+
+        def _read_response(timeout: float = 30.0) -> dict | None:
+            """Read a JSON-RPC response from the server."""
+            try:
+                line = asyncio.wait_for(
+                    connection.process.stdout.readline(),
+                    timeout=timeout,
+                )
+                if not line:
+                    return None
+                return json.loads(line.decode())
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout reading response from {connection.name}")
+                return None
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse JSON-RPC response: {e}")
+                return None
+
+        try:
+            # Send tools/call request
+            logger.debug(f"Calling tool {tool} on {connection.name}")
+            _send_request("tools/call", {
+                "name": tool,
+                "arguments": args,
+            })
+
+            # Read response
+            response = _read_response(timeout=60.0)
+            if not response:
+                return ToolCallResult(
+                    success=False,
+                    error="No response from server",
+                    server=connection.name,
+                    tool=tool,
+                )
+
+            # Check for error
+            if "error" in response:
+                error_data = response["error"]
+                error_message = error_data.get("message", str(error_data))
+                return ToolCallResult(
+                    success=False,
+                    error=error_message,
+                    server=connection.name,
+                    tool=tool,
+                )
+
+            # Extract result
+            result = response.get("result", {})
+            content = result.get("content", [])
+
+            # Parse content items
+            result_data = []
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        result_data.append({"type": "text", "text": item.get("text", "")})
+                    elif item.get("type") == "resource":
+                        result_data.append({"type": "resource", "data": item})
+                    elif item.get("type") == "image":
+                        result_data.append({"type": "image", "data": item})
+                    else:
+                        result_data.append({"type": "unknown", "value": item})
+                else:
+                    result_data.append({"type": "unknown", "value": str(item)})
+
+            return ToolCallResult(
+                success=True,
+                data=result_data,
+                server=connection.name,
+                tool=tool,
+            )
+
+        except asyncio.TimeoutError:
+            return ToolCallResult(
+                success=False,
+                error="Tool call timed out",
+                server=connection.name,
+                tool=tool,
+            )
+        except Exception as e:
+            logger.error(f"Error calling process tool {connection.name}.{tool}: {e}")
+            return ToolCallResult(
+                success=False,
+                error=str(e),
+                server=connection.name,
+                tool=tool,
+            )
 
     async def health_check(self, server: str) -> bool:
         """Check if a server is healthy and responding.
@@ -765,8 +1005,40 @@ class MCPServerManager:
         # If server has a health check URL, verify it
         if connection.config.health_check:
             try:
-                # TODO: Implement HTTP health check
-                pass
+                if HAS_AIOHTTP:
+                    # Use aiohttp for async HTTP request
+                    timeout = aiohttp.ClientTimeout(total=5)
+                    async with aiohttp.ClientSession(timeout=timeout) as session:
+                        async with session.get(connection.config.health_check) as response:
+                            if 200 <= response.status < 300:
+                                logger.debug(f"Health check passed for {server}: {response.status}")
+                                return True
+                            else:
+                                logger.warning(
+                                    f"Health check failed for {server}: {response.status}"
+                                )
+                                return False
+                else:
+                    # Fallback: use asyncio with basic socket connection
+                    # Parse URL to get host and port
+                    from urllib.parse import urlparse
+
+                    parsed = urlparse(connection.config.health_check)
+                    host = parsed.hostname or parsed.path
+                    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+
+                    # Try to open a connection
+                    reader, writer = await asyncio.wait_for(
+                        asyncio.open_connection(host, port),
+                        timeout=5.0,
+                    )
+                    writer.close()
+                    await writer.wait_closed()
+                    logger.debug(f"Health check passed for {server} (socket)")
+                    return True
+            except asyncio.TimeoutError:
+                logger.warning(f"Health check timed out for {server}")
+                return False
             except Exception as e:
                 logger.error(f"Health check failed for {server}: {e}")
                 return False

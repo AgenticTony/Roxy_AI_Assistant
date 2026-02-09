@@ -412,13 +412,24 @@ When responding:
 
     def register_skill(self, skill: RoxySkill) -> None:
         """
-        Register a skill with the orchestrator.
+        Register a skill with the orchestrator and skill registry.
+
+        Skills are registered with the skill_registry for dispatch during
+        request processing. The Agno agent integration is handled through
+        the skill registry's find_skill method.
 
         Args:
             skill: Skill instance to register.
         """
-        # TODO: Implement skill registration with Agno tools
-        # This will be expanded when skills are fully implemented
+        # Register with the skill registry for dispatch
+        self.skill_registry.register(skill)
+
+        # Note: Agno agent function calling integration can be added
+        # by passing tool functions to the agent during creation or
+        # by using the @agno.tools.function decorator. The current
+        # implementation uses the skill registry for dispatch which
+        # provides more control over skill execution and lifecycle.
+
         logger.info(f"Registered skill: {skill.name}")
 
     async def get_memory(self, query: str, limit: int = 5) -> list[str]:

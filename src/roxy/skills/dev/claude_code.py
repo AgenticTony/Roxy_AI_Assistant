@@ -6,6 +6,7 @@ All operations local.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import subprocess
@@ -160,8 +161,8 @@ class ClaudeCodeSkill(RoxySkill):
             logger.error(f"Error opening editor: {e}")
             return False
 
-    def _get_project_path(self, context: SkillContext) -> Path | None:
-        """Get project path from context or current directory.
+    async def _get_project_path(self, context: SkillContext) -> Path | None:
+        """Get project path from context, memory, or current directory.
 
         Args:
             context: Skill execution context.
@@ -175,7 +176,19 @@ class ClaudeCodeSkill(RoxySkill):
             return Path(path_param).expanduser()
 
         # Check memory for current project
-        # TODO: Query memory for "current_project" preference
+        try:
+            project_memories = await context.memory.recall("current_project")
+            if project_memories:
+                # Parse the stored project info
+                project_info = json.loads(project_memories[0])
+                project_path = project_info.get("path")
+                if project_path:
+                    path = Path(project_path).expanduser()
+                    if path.exists() and path.is_dir():
+                        logger.info(f"Using current project from memory: {path}")
+                        return path
+        except (json.JSONDecodeError, KeyError, IndexError) as e:
+            logger.debug(f"Could not retrieve current project from memory: {e}")
 
         # Default to current directory
         return Path.cwd()
@@ -229,7 +242,7 @@ class ClaudeCodeSkill(RoxySkill):
         user_input = context.user_input.lower()
 
         # Get project path
-        project_path = self._get_project_path(context)
+        project_path = await self._get_project_path(context)
 
         if not project_path:
             return SkillResult(
