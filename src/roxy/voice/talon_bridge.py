@@ -81,11 +81,11 @@ class TalonBridge:
             path=str(self.socket_path),
         )
 
-        # Set socket permissions
+        # Set socket permissions (user read/write only for local IPC)
         try:
             import os
 
-            os.chmod(str(self.socket_path), 0o777)
+            os.chmod(str(self.socket_path), 0o600)
         except Exception as e:
             logger.warning(f"Could not set socket permissions: {e}")
 

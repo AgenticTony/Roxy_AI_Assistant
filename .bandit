@@ -1,0 +1,5 @@
+[bandit]
+# Only report medium and higher severity issues
+exclude_dirs = ['/usr', 'tests']
+skips = ['B108']  # Skip tmp directory warnings (we use /tmp for legitimate local IPC)
+
