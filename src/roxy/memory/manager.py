@@ -49,12 +49,14 @@ class MemoryManager:
         self,
         config: MemoryConfig,
         ollama_host: str | None = None,
+        use_mem0: bool = True,
     ) -> None:
         """Initialize MemoryManager with all three memory tiers.
 
         Args:
             config: Memory configuration from RoxyConfig
             ollama_host: Optional Ollama host override. Uses config default if None.
+            use_mem0: If False, use in-memory fallback instead of Mem0 (for testing)
         """
         self._config = config
 
@@ -77,6 +79,7 @@ class MemoryManager:
             ollama_host=self._ollama_host,
             llm_model=config.mem0_llm_model,
             embed_model=config.mem0_embedder_model,
+            use_mem0=use_mem0,
         )
 
         # Current conversation tracking

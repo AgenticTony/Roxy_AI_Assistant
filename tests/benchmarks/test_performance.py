@@ -119,7 +119,7 @@ async def test_memory_search_performance(mock_config: RoxyConfig) -> None:
 
     Target: <100ms for memory search
     """
-    manager = MemoryManager(config=mock_config)
+    manager = MemoryManager(config=mock_config, use_mem0=False)
     await manager.initialize()
 
     # Add some test data

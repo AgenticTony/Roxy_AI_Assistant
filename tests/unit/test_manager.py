@@ -32,8 +32,8 @@ def temp_data_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 async def memory_manager(memory_config: MemoryConfig) -> MemoryManager:
-    """Create initialized MemoryManager."""
-    manager = MemoryManager(config=memory_config)
+    """Create initialized MemoryManager using in-memory fallback for tests."""
+    manager = MemoryManager(config=memory_config, use_mem0=False)
     await manager.initialize()
     yield manager
 
@@ -44,7 +44,7 @@ class TestMemoryManagerInit:
     @pytest.mark.asyncio
     async def test_init(self, memory_config: MemoryConfig) -> None:
         """Test initialization."""
-        manager = MemoryManager(config=memory_config)
+        manager = MemoryManager(config=memory_config, use_mem0=False)
         assert not manager.is_initialized
 
         await manager.initialize()
@@ -59,7 +59,7 @@ class TestMemoryManagerInit:
             history_db=str(data_dir / "test_memory.db"),
         )
 
-        manager = MemoryManager(config=config)
+        manager = MemoryManager(config=config, use_mem0=False)
         await manager.initialize()
 
         assert data_dir.exists()
@@ -67,7 +67,7 @@ class TestMemoryManagerInit:
     @pytest.mark.asyncio
     async def test_init_starts_conversation(self, memory_config: MemoryConfig) -> None:
         """Test initialization starts a new conversation."""
-        manager = MemoryManager(config=memory_config)
+        manager = MemoryManager(config=memory_config, use_mem0=False)
         await manager.initialize()
 
         assert manager.current_conversation_id is not None
@@ -75,7 +75,7 @@ class TestMemoryManagerInit:
     @pytest.mark.asyncio
     async def test_init_is_idempotent(self, memory_config: MemoryConfig) -> None:
         """Test initialize can be called multiple times."""
-        manager = MemoryManager(config=memory_config)
+        manager = MemoryManager(config=memory_config, use_mem0=False)
         await manager.initialize()
         conv_id_1 = manager.current_conversation_id
 
@@ -130,7 +130,7 @@ class TestSessionContext:
     @pytest.mark.asyncio
     async def test_operations_not_initialized(self, memory_config: MemoryConfig) -> None:
         """Test operations fail before initialization."""
-        manager = MemoryManager(config=memory_config)
+        manager = MemoryManager(config=memory_config, use_mem0=False)
         # Don't call initialize()
 
         with pytest.raises(RuntimeError, match="not initialized"):
@@ -339,7 +339,7 @@ class TestProperties:
     @pytest.mark.asyncio
     async def test_is_initialized(self, memory_config: MemoryConfig) -> None:
         """Test is_initialized property."""
-        manager = MemoryManager(config=memory_config)
+        manager = MemoryManager(config=memory_config, use_mem0=False)
         assert not manager.is_initialized
 
         await manager.initialize()
@@ -352,7 +352,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_all_operations_fail_before_init(self, memory_config: MemoryConfig) -> None:
         """Test all operations fail before initialization."""
-        manager = MemoryManager(config=memory_config)
+        manager = MemoryManager(config=memory_config, use_mem0=False)
 
         with pytest.raises(RuntimeError, match="not initialized"):
             await manager.get_session_context()
