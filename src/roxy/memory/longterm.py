@@ -95,6 +95,12 @@ class LongTermMemory:
                         "model": self._embed_model,
                     },
                 },
+                "vector_store": {
+                    "provider": "qdrant",
+                    "config": {
+                        "embedding_model_dims": 768,  # nomic-embed-text produces 768-dim vectors
+                    },
+                },
                 "history_db_path": str(self._data_dir / "history.db"),
                 "custom_prompt": """
                 You are a memory storage assistant for Roxy, an AI assistant.
@@ -166,7 +172,16 @@ class LongTermMemory:
             # Use Mem0 for semantic search
             try:
                 results = self._mem0_client.search(query, user_id="roxy", limit=limit)
-                return [result.get("memory", "") for result in results]
+                # Handle both dict and string result formats
+                formatted_results = []
+                for result in results:
+                    if isinstance(result, dict):
+                        formatted_results.append(result.get("memory", ""))
+                    elif isinstance(result, str):
+                        formatted_results.append(result)
+                    else:
+                        formatted_results.append(str(result))
+                return formatted_results
             except Exception as e:
                 logger.error(f"Mem0 search failed: {e}")
                 return []
@@ -199,7 +214,13 @@ class LongTermMemory:
                 results = self._mem0_client.search("category:preference", user_id="roxy", limit=100)
                 preferences = {}
                 for result in results:
-                    memory = result.get("memory", "")
+                    # Handle both dict and string result formats
+                    if isinstance(result, dict):
+                        memory = result.get("memory", "")
+                    elif isinstance(result, str):
+                        memory = result
+                    else:
+                        memory = str(result)
                     # Parse format "[preference] key: value"
                     if "]: " in memory:
                         key_value = memory.split("]: ", 1)[1]
@@ -273,14 +294,34 @@ class LongTermMemory:
         if self._use_mem0:
             try:
                 results = self._mem0_client.search(search_query, user_id="roxy", limit=limit)
-                return [
-                    {
-                        "content": result.get("memory", ""),
-                        "metadata": result.get("metadata", {}),
-                        "score": result.get("score", 0.0),
-                    }
-                    for result in results
-                ]
+                formatted_results = []
+                for result in results:
+                    # Handle both dict and string result formats
+                    if isinstance(result, dict):
+                        formatted_results.append(
+                            {
+                                "content": result.get("memory", ""),
+                                "metadata": result.get("metadata", {}),
+                                "score": result.get("score", 0.0),
+                            }
+                        )
+                    elif isinstance(result, str):
+                        formatted_results.append(
+                            {
+                                "content": result,
+                                "metadata": {},
+                                "score": 0.0,
+                            }
+                        )
+                    else:
+                        formatted_results.append(
+                            {
+                                "content": str(result),
+                                "metadata": {},
+                                "score": 0.0,
+                            }
+                        )
+                return formatted_results
             except Exception as e:
                 logger.error(f"Memory search failed: {e}")
                 return []

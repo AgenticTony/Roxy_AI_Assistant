@@ -147,9 +147,9 @@ class RoxyInitializer:
                 if response.status_code != 200:
                     raise RuntimeError(f"Ollama returned status {response.status_code}")
 
-            # Check for required models
-            models_response = await client.get(f"{ollama_host}/api/tags")
-            models_data = models_response.json()
+                # Check for required models (reuse the same client)
+                models_response = await client.get(f"{ollama_host}/api/tags")
+                models_data = models_response.json()
 
             available_models = {
                 model.get("name", "").split(":")[0] for model in models_data.get("models", [])
