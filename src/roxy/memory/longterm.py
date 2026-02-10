@@ -36,6 +36,7 @@ class LongTermMemory:
         ollama_host: str | None = None,
         llm_model: str = "qwen3:8b",
         embed_model: str = "nomic-embed-text",
+        use_mem0: bool = True,
     ) -> None:
         """Initialize long-term memory.
 
@@ -44,8 +45,10 @@ class LongTermMemory:
             ollama_host: Ollama API endpoint. Uses config default if None.
             llm_model: Model for memory operations (must be available in Ollama)
             embed_model: Model for embeddings (must support embeddings in Ollama)
+            use_mem0: If False, use simple in-memory storage instead of Mem0
         """
         self._data_dir = Path(data_dir)
+        self._force_use_fallback = not use_mem0  # For testing: force fallback mode
 
         # Load config for defaults
         config = RoxyConfig.load()
@@ -75,6 +78,14 @@ class LongTermMemory:
 
         # Ensure data directory exists
         self._data_dir.mkdir(parents=True, exist_ok=True)
+
+        # Check if we should force fallback mode (for testing)
+        if hasattr(self, "_force_use_fallback") and self._force_use_fallback:
+            logger.info("Using in-memory fallback (use_mem0=False)")
+            self._mem0_client: dict[str, Any] = {}
+            self._use_mem0 = False
+            self._initialized = True
+            return
 
         # Try to import mem0ai
         try:

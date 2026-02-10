@@ -18,8 +18,8 @@ def temp_data_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 async def memory(temp_data_dir: Path) -> LongTermMemory:
-    """Create LongTermMemory instance."""
-    mem = LongTermMemory(data_dir=str(temp_data_dir))
+    """Create LongTermMemory instance using in-memory fallback for tests."""
+    mem = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
     await mem.initialize()
     yield mem
 
@@ -30,7 +30,7 @@ class TestLongTermMemoryInit:
     @pytest.mark.asyncio
     async def test_init(self, temp_data_dir: Path) -> None:
         """Test initialization."""
-        memory = LongTermMemory(data_dir=str(temp_data_dir))
+        memory = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
         assert not memory._initialized
 
         await memory.initialize()
@@ -40,7 +40,7 @@ class TestLongTermMemoryInit:
     async def test_init_creates_data_dir(self, temp_data_dir: Path) -> None:
         """Test initialization creates data directory."""
         data_dir = temp_data_dir / "subdir" / "mem0"
-        memory = LongTermMemory(data_dir=str(data_dir))
+        memory = LongTermMemory(data_dir=str(data_dir), use_mem0=False)
         await memory.initialize()
 
         assert data_dir.exists()
@@ -54,7 +54,7 @@ class TestLongTermMemoryInit:
             mock_roxy_config.llm_local.host = "http://test-host:11434"
             mock_config.load.return_value = mock_roxy_config
 
-            memory = LongTermMemory(data_dir=str(temp_data_dir))
+            memory = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
             assert memory._ollama_host == "http://test-host:11434"
 
     @pytest.mark.asyncio
@@ -66,7 +66,7 @@ class TestLongTermMemoryInit:
     @pytest.mark.asyncio
     async def test_initialize_is_idempotent(self, temp_data_dir: Path) -> None:
         """Test initialize can be called multiple times."""
-        memory = LongTermMemory(data_dir=str(temp_data_dir))
+        memory = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
         await memory.initialize()
         await memory.initialize()  # Should not raise
 
@@ -100,7 +100,7 @@ class TestRemember:
     @pytest.mark.asyncio
     async def test_remember_not_initialized(self, temp_data_dir: Path) -> None:
         """Test remember without initialization raises error."""
-        memory = LongTermMemory(data_dir=str(temp_data_dir))
+        memory = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
         # Don't call initialize()
 
         with pytest.raises(RuntimeError, match="not initialized"):
@@ -150,7 +150,7 @@ class TestRecall:
     @pytest.mark.asyncio
     async def test_recall_not_initialized(self, temp_data_dir: Path) -> None:
         """Test recall without initialization raises error."""
-        memory = LongTermMemory(data_dir=str(temp_data_dir))
+        memory = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
 
         with pytest.raises(RuntimeError, match="not initialized"):
             await memory.recall("query")
@@ -213,7 +213,7 @@ class TestPreferences:
         """Test preferences persist across reinitialization."""
         # Use fallback mode for simpler testing
         # Create and set preference
-        memory1 = LongTermMemory(data_dir=str(temp_data_dir))
+        memory1 = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
         await memory1.initialize()
         # Force fallback mode
         memory1._mem0_client = {}
@@ -221,7 +221,7 @@ class TestPreferences:
         await memory1.set_preference("test", "value1")
 
         # Reinitialize and check
-        memory2 = LongTermMemory(data_dir=str(temp_data_dir))
+        memory2 = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
         await memory2.initialize()
         # Force fallback mode
         memory2._mem0_client = {}
@@ -364,7 +364,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_operations_before_initialize_fail(self, temp_data_dir: Path) -> None:
         """Test all operations fail before initialization."""
-        memory = LongTermMemory(data_dir=str(temp_data_dir))
+        memory = LongTermMemory(data_dir=str(temp_data_dir), use_mem0=False)
 
         with pytest.raises(RuntimeError, match="not initialized"):
             await memory.remember("key", "value")
