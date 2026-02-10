@@ -39,7 +39,7 @@ And she gets smarter the more you use her.
 
 ```bash
 # Clone and install
-git clone https://github.com/anthonyforan/roxy.git
+git clone https://github.com/AgenticTony/Roxy_AI_Assistant.git
 cd roxy
 bash scripts/install.sh
 
