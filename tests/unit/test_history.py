@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import sqlite3
 
 from roxy.memory.history import ConversationHistory
 
@@ -61,9 +60,7 @@ class TestConversationHistoryInit:
 
         # Check tables exist
         cursor = history._conn.cursor()
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = [row[0] for row in cursor.fetchall()]
 
         assert "conversations" in tables
@@ -123,9 +120,7 @@ class TestConversationLifecycle:
         assert conv["ended_at"] is not None
 
     @pytest.mark.asyncio
-    async def test_get_nonexistent_conversation(
-        self, mock_history: ConversationHistory
-    ) -> None:
+    async def test_get_nonexistent_conversation(self, mock_history: ConversationHistory) -> None:
         """Test getting conversation that doesn't exist."""
         result = await mock_history.get_conversation("nonexistent-id")
         assert result is None
@@ -207,7 +202,6 @@ class TestMessageOperations:
         conv_id = await mock_history.start_conversation()
 
         # Add messages with delays to ensure different timestamps
-        import time
         for i in range(3):
             await mock_history.add_message(conv_id, "user", f"Message {i}")
             await asyncio.sleep(0.01)  # Small delay
@@ -285,9 +279,7 @@ class TestListConversations:
         assert conversations == []
 
     @pytest.mark.asyncio
-    async def test_list_conversations(
-        self, mock_history: ConversationHistory
-    ) -> None:
+    async def test_list_conversations(self, mock_history: ConversationHistory) -> None:
         """Test listing conversations."""
         conv1 = await mock_history.start_conversation()
         await mock_history.end_conversation(conv1)
@@ -318,9 +310,7 @@ class TestListConversations:
         assert conversations[0]["message_count"] == 2
 
     @pytest.mark.asyncio
-    async def test_list_pagination(
-        self, mock_history: ConversationHistory
-    ) -> None:
+    async def test_list_pagination(self, mock_history: ConversationHistory) -> None:
         """Test listing with pagination."""
         # Create 5 conversations
         conv_ids = []
@@ -361,15 +351,11 @@ class TestEmbeddingGeneration:
         mock_history._http_client.post.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_generate_embedding_http_error(
-        self, mock_history: ConversationHistory
-    ) -> None:
+    async def test_generate_embedding_http_error(self, mock_history: ConversationHistory) -> None:
         """Test embedding generation handles HTTP errors."""
         import httpx
 
-        mock_history._http_client.post = AsyncMock(
-            side_effect=httpx.HTTPError("Connection failed")
-        )
+        mock_history._http_client.post = AsyncMock(side_effect=httpx.HTTPError("Connection failed"))
 
         with pytest.raises(RuntimeError, match="Failed to generate embedding"):
             await mock_history._generate_embedding("test")

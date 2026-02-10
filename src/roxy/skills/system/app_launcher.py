@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import logging
 import subprocess
-from typing import Any
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
 
@@ -96,7 +95,9 @@ class AppLauncherSkill(RoxySkill):
             suggestions = await self._find_similar_apps(app_name)
 
             if suggestions:
-                suggestion_text = f"Couldn't find '{app_name}'. Did you mean: {', '.join(suggestions[:3])}?"
+                suggestion_text = (
+                    f"Couldn't find '{app_name}'. Did you mean: {', '.join(suggestions[:3])}?"
+                )
             else:
                 suggestion_text = f"Couldn't find an application named '{app_name}'."
 

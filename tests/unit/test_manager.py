@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -149,9 +148,7 @@ class TestConversationHistory:
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_search_history_with_results(
-        self, memory_manager: MemoryManager
-    ) -> None:
+    async def test_search_history_with_results(self, memory_manager: MemoryManager) -> None:
         """Test searching history with results."""
         # Add some messages to current conversation
         await memory_manager.add_to_session("user", "Python programming")
@@ -164,9 +161,7 @@ class TestConversationHistory:
         assert isinstance(results, list)
 
     @pytest.mark.asyncio
-    async def test_get_conversation_history(
-        self, memory_manager: MemoryManager
-    ) -> None:
+    async def test_get_conversation_history(self, memory_manager: MemoryManager) -> None:
         """Test getting conversation by ID."""
         conv_id = memory_manager.current_conversation_id
         await memory_manager.add_to_session("user", "Test message")
@@ -177,9 +172,7 @@ class TestConversationHistory:
         assert conv["id"] == conv_id
 
     @pytest.mark.asyncio
-    async def test_get_nonexistent_conversation(
-        self, memory_manager: MemoryManager
-    ) -> None:
+    async def test_get_nonexistent_conversation(self, memory_manager: MemoryManager) -> None:
         """Test getting non-existent conversation returns None."""
         conv = await memory_manager.get_conversation_history("nonexistent-id")
 
@@ -285,9 +278,7 @@ class TestConversationLifecycle:
         assert memory_manager.current_conversation_id is None
 
     @pytest.mark.asyncio
-    async def test_end_conversation_clears_session(
-        self, memory_manager: MemoryManager
-    ) -> None:
+    async def test_end_conversation_clears_session(self, memory_manager: MemoryManager) -> None:
         """Test ending conversation clears session."""
         await memory_manager.add_to_session("user", "Test message")
 
@@ -324,9 +315,7 @@ class TestContextBuilding:
         assert len(context["session_messages"]) >= 1
 
     @pytest.mark.asyncio
-    async def test_build_context_includes_preferences(
-        self, memory_manager: MemoryManager
-    ) -> None:
+    async def test_build_context_includes_preferences(self, memory_manager: MemoryManager) -> None:
         """Test context includes user preferences."""
         # Use fallback mode for testing
         memory_manager._longterm._mem0_client = {}
@@ -361,9 +350,7 @@ class TestErrorHandling:
     """Tests for error handling."""
 
     @pytest.mark.asyncio
-    async def test_all_operations_fail_before_init(
-        self, memory_config: MemoryConfig
-    ) -> None:
+    async def test_all_operations_fail_before_init(self, memory_config: MemoryConfig) -> None:
         """Test all operations fail before initialization."""
         manager = MemoryManager(config=memory_config)
 

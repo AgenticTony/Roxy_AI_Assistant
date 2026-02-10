@@ -5,15 +5,14 @@ Tests the 10 test inputs specified in Task 1 of the hardening session.
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from roxy.brain.orchestrator import RoxyOrchestrator
-from roxy.brain.tool_adapter import SkillToolAdapter, IntentClassifier
-from roxy.config import RoxyConfig, LocalLLMConfig, CloudLLMConfig, PrivacyConfig
+from roxy.brain.tool_adapter import IntentClassifier, SkillToolAdapter
+from roxy.config import CloudLLMConfig, LocalLLMConfig, PrivacyConfig, RoxyConfig
 from roxy.skills.registry import SkillRegistry
-
 
 # Test inputs and expected outputs from Task 1
 TEST_CASES = [
@@ -116,19 +115,17 @@ async def mock_orchestrator(integration_config):
     SkillRegistry.reset()
 
     # Mock the local client
-    with patch('roxy.brain.llm_clients.AsyncOpenAI') as mock_openai:
+    with patch("roxy.brain.llm_clients.AsyncOpenAI") as mock_openai:
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "Test response"
         mock_response.choices[0].finish_reason = "stop"
         mock_response.usage.total_tokens = 30
 
-        mock_openai.return_value.chat.completions.create = AsyncMock(
-            return_value=mock_response
-        )
+        mock_openai.return_value.chat.completions.create = AsyncMock(return_value=mock_response)
 
         # Mock the Ollama availability check
-        with patch('httpx.AsyncClient.get') as mock_get:
+        with patch("httpx.AsyncClient.get") as mock_get:
             mock_get.return_value.status_code = 200
             mock_get.return_value.json.return_value = {"models": []}
 
@@ -178,8 +175,8 @@ class TestIntentClassification:
         # Mock the internal client's create method
         async def mock_create(*args, **kwargs):
             # Get the user input from the prompt
-            messages = kwargs.get('messages', [])
-            content = messages[-1].get('content', '') if messages else ''
+            messages = kwargs.get("messages", [])
+            content = messages[-1].get("content", "") if messages else ""
 
             # Find which test case matches
             for user_input, response in mock_llm_response.items():
@@ -300,8 +297,8 @@ class TestToolAdapterIntegration:
         registry = SkillRegistry.get_instance()
 
         # Import and register some actual skills
-        from roxy.skills.system.app_launcher import AppLauncherSkill
         from roxy.skills.productivity.calendar import CalendarSkill
+        from roxy.skills.system.app_launcher import AppLauncherSkill
         from roxy.skills.system.file_search import FileSearchSkill
 
         registry.register(AppLauncherSkill)

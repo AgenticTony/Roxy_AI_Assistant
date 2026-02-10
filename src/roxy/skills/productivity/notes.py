@@ -10,8 +10,12 @@ import logging
 import re
 from typing import TYPE_CHECKING
 
+from roxy.macos.applescript import (
+    escape_applescript_string,
+    get_applescript_runner,
+    get_joinlist_handler,
+)
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.macos.applescript import escape_applescript_string, get_applescript_runner, get_joinlist_handler
 
 logger = logging.getLogger(__name__)
 
@@ -138,11 +142,13 @@ class NotesSkill(RoxySkill):
                     if len(body) > 200:
                         body = body[:200] + "..."
 
-                    notes.append({
-                        "name": parts[0].strip(),
-                        "body": body,
-                        "modified": parts[2].strip(),
-                    })
+                    notes.append(
+                        {
+                            "name": parts[0].strip(),
+                            "body": body,
+                            "modified": parts[2].strip(),
+                        }
+                    )
 
             return notes
 
@@ -274,7 +280,7 @@ class NotesSkill(RoxySkill):
                 query = user_input.replace(trigger, "").strip()
                 for word in ["for", "in"]:
                     if query.startswith(word + " "):
-                        query = query[len(word + " "):].strip()
+                        query = query[len(word + " ") :].strip()
                 break
         else:
             # No trigger found, use whole input as query

@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import socket
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -47,14 +46,14 @@ class TalonBridge:
         # State management
         self._server: asyncio.Server | None = None
         self._running: bool = False
-        self._orchestrator: "RoxyOrchestrator | None" = None
+        self._orchestrator: RoxyOrchestrator | None = None
 
         # Active connections
         self._connections: set[asyncio.StreamWriter] = set()
 
         logger.debug(f"TalonBridge initialized with socket_path='{socket_path}'")
 
-    async def start_server(self, orchestrator: "RoxyOrchestrator") -> None:
+    async def start_server(self, orchestrator: RoxyOrchestrator) -> None:
         """Start the socket server.
 
         Args:
@@ -85,6 +84,7 @@ class TalonBridge:
         # Set socket permissions
         try:
             import os
+
             os.chmod(str(self.socket_path), 0o777)
         except Exception as e:
             logger.warning(f"Could not set socket permissions: {e}")
@@ -378,10 +378,13 @@ class TalonBridge:
             writer: Stream writer.
             error: Error message.
         """
-        await self._send_response(writer, {
-            "success": False,
-            "error": error,
-        })
+        await self._send_response(
+            writer,
+            {
+                "success": False,
+                "error": error,
+            },
+        )
 
     @property
     def is_running(self) -> bool:

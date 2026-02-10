@@ -6,23 +6,14 @@ making it easier to test and swap implementations.
 
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, Mock
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
-from roxy.brain.orchestrator import RoxyOrchestrator
 from roxy.brain.llm_clients import LLMResponse
-from roxy.brain.protocols import (
-    PrivacyGatewayProtocol,
-    LocalLLMClientProtocol,
-    CloudLLMClientProtocol,
-    ConfidenceRouterProtocol,
-    MemoryManagerProtocol,
-    SkillRegistryProtocol,
-)
-from roxy.config import RoxyConfig, MemoryConfig, PrivacyConfig
+from roxy.brain.orchestrator import RoxyOrchestrator
+from roxy.config import RoxyConfig
 
 
 class MockPrivacyGateway:
@@ -39,11 +30,13 @@ class MockPrivacyGateway:
     def redact(self, text: str) -> Any:
         self.redact_called = True
         from dataclasses import dataclass
+
         @dataclass
         class RedactionResult:
             redacted_text: str
             pii_matches: list = None
             was_redacted: bool = False
+
         return RedactionResult(redacted_text=text, pii_matches=[], was_redacted=False)
 
     def restore(self, text: str, pii_matches: list) -> str:

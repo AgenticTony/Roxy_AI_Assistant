@@ -11,9 +11,9 @@ from dataclasses import dataclass
 from typing import Literal
 
 import httpx
-from openai import AsyncOpenAI, APIError, APIConnectionError, RateLimitError
+from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
 
-from .rate_limiter import RateLimiter, RateLimiterAware, RateLimitConfig
+from .rate_limiter import RateLimiter, RateLimiterAware
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ class OllamaClient(LLMClient):
         """Close the HTTP client."""
         await self._http_client.aclose()
 
-    async def __aenter__(self) -> "OllamaClient":
+    async def __aenter__(self) -> OllamaClient:
         """Async context manager entry."""
         return self
 
@@ -298,7 +298,9 @@ class CloudLLMClient(LLMClient, RateLimiterAware):
                 if attempt < max_retries:
                     # Exponential backoff
                     wait_time = 2**attempt
-                    logger.warning(f"Rate limited, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                    logger.warning(
+                        f"Rate limited, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})"
+                    )
                     await self._http_client.aclose()
                     self._http_client = httpx.AsyncClient(timeout=self.timeout)
                     self._client = AsyncOpenAI(
@@ -372,7 +374,6 @@ class CloudLLMClient(LLMClient, RateLimiterAware):
         Returns:
             List of failed request records as dictionaries.
         """
-        from .rate_limiter import RateLimitRecord
 
         records = self._rate_limiter.get_failed_requests(self.provider, hours)
         return [r.to_dict() for r in records]
@@ -386,7 +387,7 @@ class CloudLLMClient(LLMClient, RateLimiterAware):
         """Close the HTTP client."""
         await self._http_client.aclose()
 
-    async def __aenter__(self) -> "CloudLLMClient":
+    async def __aenter__(self) -> CloudLLMClient:
         """Async context manager entry."""
         return self
 

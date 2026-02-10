@@ -5,8 +5,8 @@ capabilities through the Model Context Protocol.
 """
 
 from roxy.mcp.custom.roxy_system import (
-    mcp,
     main,
+    mcp,
     roxy_get_user_preferences,
     roxy_search_files,
     roxy_search_memory,

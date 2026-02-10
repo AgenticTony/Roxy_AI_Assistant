@@ -7,17 +7,16 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-import yaml
 
 from roxy.config import (
-    RoxyConfig,
-    LocalLLMConfig,
     CloudLLMConfig,
-    PrivacyConfig,
-    MemoryConfig,
-    VoiceConfig,
     CloudProvider,
     ConsentMode,
+    LocalLLMConfig,
+    MemoryConfig,
+    PrivacyConfig,
+    RoxyConfig,
+    VoiceConfig,
 )
 
 

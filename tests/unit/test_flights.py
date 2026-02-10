@@ -6,13 +6,13 @@ No external API calls are made.
 
 from __future__ import annotations
 
-import pytest
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-from roxy.brain.privacy import PrivacyGateway
+import pytest
+
 from roxy.skills.base import SkillContext, StubMemoryManager
-from roxy.skills.web.flights import FlightSearchSkill, FlightOption, FlightSearchCache
+from roxy.skills.web.flights import FlightOption, FlightSearchCache, FlightSearchSkill
 
 
 @pytest.fixture
@@ -101,12 +101,11 @@ class TestFlightSearchSkill:
 
     def test_extract_price_from_string(self, flight_skill):
         """Test price extraction from various formats."""
-        from roxy.skills.web.flights import FlightOption
         import re
 
         def extract_price(price: str) -> float:
             try:
-                numbers = re.findall(r'\d+\.?\d*', price.replace(",", ""))
+                numbers = re.findall(r"\d+\.?\d*", price.replace(",", ""))
                 return float(numbers[0]) if numbers else float("inf")
             except (ValueError, IndexError):
                 return float("inf")
@@ -165,7 +164,6 @@ class TestFlightSearchCache:
     @pytest.mark.asyncio
     async def test_format_results(self, flight_skill):
         """Test formatting flight results for display."""
-        from datetime import datetime
 
         flights = [
             FlightOption(
@@ -190,7 +188,13 @@ class TestFlightSearchCache:
             ),
         ]
 
-        params = {"origin": "CPH", "destination": "LHR", "departure_date": None, "passengers": 1, "class": "economy"}
+        params = {
+            "origin": "CPH",
+            "destination": "LHR",
+            "departure_date": None,
+            "passengers": 1,
+            "class": "economy",
+        }
 
         result = flight_skill._format_results(flights, params, cached=False)
 

@@ -73,7 +73,7 @@ class ProjectInfo:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ProjectInfo":
+    def from_dict(cls, data: dict[str, Any]) -> ProjectInfo:
         """Create from dictionary."""
         return cls(**data)
 
@@ -189,9 +189,7 @@ class ProjectManagerSkill(RoxySkill):
             logger.debug(f"Could not get current project from memory: {e}")
         return None
 
-    async def _set_current_project(
-        self, context: SkillContext, project: ProjectInfo
-    ) -> None:
+    async def _set_current_project(self, context: SkillContext, project: ProjectInfo) -> None:
         """Set the current active project in memory.
 
         Args:
@@ -210,7 +208,7 @@ class ProjectManagerSkill(RoxySkill):
             # Store in memory as current project
             # Note: We're using remember() to persist this fact
             await context.memory.remember(
-                f"current_project",
+                "current_project",
                 json.dumps(project.to_dict()),
             )
         except Exception as e:

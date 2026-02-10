@@ -7,7 +7,6 @@ and other system APIs. Falls back to AppleScript if PyObjC is not available.
 from __future__ import annotations
 
 import logging
-import platform
 import subprocess
 from typing import Any
 

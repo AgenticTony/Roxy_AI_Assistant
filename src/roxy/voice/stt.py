@@ -10,9 +10,9 @@ import asyncio
 import logging
 import tempfile
 import wave
+from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import AsyncGenerator
 
 import numpy as np
 import sounddevice as sd
@@ -164,8 +164,10 @@ class SpeechToText:
                 for segment in segments:
                     text_parts.append(segment.text)
 
-                logger.debug(f"Transcription completed: language={info.language}, "
-                           f"probability={info.language_probability:.2f}")
+                logger.debug(
+                    f"Transcription completed: language={info.language}, "
+                    f"probability={info.language_probability:.2f}"
+                )
 
                 return text_parts, info.duration
 
@@ -271,7 +273,9 @@ class SpeechToText:
         min_frames = int(min_duration * SAMPLE_RATE)
 
         # Callback for audio stream
-        def _audio_callback(indata: np.ndarray, frames: int, time, status: sd.CallbackFlags) -> None:
+        def _audio_callback(
+            indata: np.ndarray, frames: int, time, status: sd.CallbackFlags
+        ) -> None:
             """Process incoming audio chunks."""
             nonlocal silence_frames, speech_detected, total_frames
 
@@ -283,7 +287,7 @@ class SpeechToText:
             audio_buffer.append(audio_int16.copy())
 
             # Calculate RMS energy for VAD
-            rms = float(np.sqrt(np.mean(audio_int16 ** 2)))
+            rms = float(np.sqrt(np.mean(audio_int16**2)))
 
             # Detect speech/silence
             if rms >= silence_threshold:

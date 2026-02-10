@@ -9,8 +9,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from roxy.macos.applescript import (
+    escape_applescript_string,
+    get_applescript_runner,
+    get_joinlist_handler,
+)
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.macos.applescript import escape_applescript_string, get_applescript_runner, get_joinlist_handler
 
 logger = logging.getLogger(__name__)
 
@@ -97,12 +101,14 @@ class EmailSkill(RoxySkill):
             for email_str in output.split(";;;"):
                 parts = email_str.split("|||")
                 if len(parts) >= 4:
-                    emails.append({
-                        "subject": parts[0].strip(),
-                        "sender": parts[1].strip(),
-                        "date": parts[2].strip(),
-                        "message_id": parts[3].strip(),
-                    })
+                    emails.append(
+                        {
+                            "subject": parts[0].strip(),
+                            "sender": parts[1].strip(),
+                            "date": parts[2].strip(),
+                            "message_id": parts[3].strip(),
+                        }
+                    )
 
             return emails
 
@@ -183,9 +189,9 @@ class EmailSkill(RoxySkill):
                 # Prepare prompt for email summarization
                 prompt = f"""Summarize the following email concisely.
 
-From: {email.get('sender', 'Unknown')}
-Subject: {email.get('subject', 'No Subject')}
-Date: {email.get('date', 'Unknown')}
+From: {email.get("sender", "Unknown")}
+Subject: {email.get("subject", "No Subject")}
+Date: {email.get("date", "Unknown")}
 
 Email Content:
 ```
@@ -209,13 +215,13 @@ Format the response in a clear, readable way:"""
                 summary = response.content.strip()
                 if summary and len(summary) > 20:
                     logger.info(f"Generated email summary using LLM for message {message_id}")
-                    return f"""From: {email.get('sender', 'Unknown')}
-Subject: {email.get('subject', 'No Subject')}
-Date: {email.get('date', 'Unknown')}
+                    return f"""From: {email.get("sender", "Unknown")}
+Subject: {email.get("subject", "No Subject")}
+Date: {email.get("date", "Unknown")}
 
 {summary}"""
                 else:
-                    logger.warning(f"LLM returned invalid summary, falling back to simple format")
+                    logger.warning("LLM returned invalid summary, falling back to simple format")
 
             except Exception as e:
                 logger.error(f"Error generating email summary with LLM: {e}")
@@ -248,7 +254,8 @@ Date: {email.get('date', 'Unknown')}
 
         # Look for numbers in input
         import re
-        number_match = re.search(r'(\d+)', user_input)
+
+        number_match = re.search(r"(\d+)", user_input)
         if number_match:
             count = min(int(number_match.group(1)), self.MAX_COUNT)
 

@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Literal
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +18,7 @@ logger = logging.getLogger(__name__)
 # PII Risk levels for classification
 class PIIRiskLevel(str, Enum):
     """Risk levels for PII data types."""
+
     LOW = "low"  # Publicly available or low sensitivity
     MEDIUM = "medium"  # Semi-private, could be used for profiling
     HIGH = "high"  # Sensitive personal information
@@ -55,6 +55,7 @@ PII_RISK_LEVELS: dict[str, PIIRiskLevel] = {
 
 class ConsentMode(str, Enum):
     """User consent modes for cloud LLM access."""
+
     ASK = "ask"
     ALWAYS = "always"
     NEVER = "never"
@@ -294,7 +295,9 @@ class PrivacyGateway:
         was_redacted = len(pii_matches) > 0
 
         if was_redacted:
-            logger.info(f"Redacted {len(pii_matches)} PII instances using patterns: {self._pattern_names}")
+            logger.info(
+                f"Redacted {len(pii_matches)} PII instances using patterns: {self._pattern_names}"
+            )
 
         return RedactionResult(
             redacted_text=redacted_text,
@@ -358,7 +361,7 @@ class PrivacyGateway:
             risk_summary = self._calculate_risk_summary(pii_matches) if pii_matches else {}
 
             log_entry = (
-                f"\n{'='*80}\n"
+                f"\n{'=' * 80}\n"
                 f"Timestamp: {timestamp}\n"
                 f"Provider: {provider}\n"
                 f"Model: {model}\n"
@@ -369,11 +372,11 @@ class PrivacyGateway:
 
             # Add PII risk summary if available
             if risk_summary:
-                log_entry += f"PII Risk Summary:\n"
+                log_entry += "PII Risk Summary:\n"
                 for risk_level, count in risk_summary.items():
                     log_entry += f"  - {risk_level}: {count} instances\n"
 
-            log_entry += f"{'='*80}\n"
+            log_entry += f"{'=' * 80}\n"
 
             with self.log_path.open("a", encoding="utf-8") as f:
                 f.write(log_entry)
@@ -461,7 +464,12 @@ class PrivacyGateway:
         if not pii_matches:
             return PIIRiskLevel.LOW
 
-        risk_order = [PIIRiskLevel.LOW, PIIRiskLevel.MEDIUM, PIIRiskLevel.HIGH, PIIRiskLevel.CRITICAL]
+        risk_order = [
+            PIIRiskLevel.LOW,
+            PIIRiskLevel.MEDIUM,
+            PIIRiskLevel.HIGH,
+            PIIRiskLevel.CRITICAL,
+        ]
         max_risk = PIIRiskLevel.LOW
 
         for match in pii_matches:

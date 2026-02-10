@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from roxy.skills.base import Permission, SkillContext, SkillResult
 from roxy.skills.system.shortcuts import ShortcutsSkill
-from roxy.skills.base import SkillContext, SkillResult, Permission
 
 
 class TestShortcutsSkill:
@@ -37,10 +37,7 @@ class TestShortcutsSkill:
         """Test extracting shortcut name from parameters."""
         skill = ShortcutsSkill()
 
-        result = skill._extract_shortcut_name(
-            "run shortcut",
-            {"shortcut_name": "My Shortcut"}
-        )
+        result = skill._extract_shortcut_name("run shortcut", {"shortcut_name": "My Shortcut"})
 
         assert result == "My Shortcut"
 
@@ -49,10 +46,7 @@ class TestShortcutsSkill:
         skill = ShortcutsSkill()
 
         # Test without quotes - the regex works better without them
-        result = skill._extract_shortcut_name(
-            "run shortcut My Awesome Shortcut",
-            {}
-        )
+        result = skill._extract_shortcut_name("run shortcut My Awesome Shortcut", {})
 
         # Result should contain the shortcut name
         assert result is not None
@@ -63,10 +57,7 @@ class TestShortcutsSkill:
         """Test when shortcut name cannot be extracted."""
         skill = ShortcutsSkill()
 
-        result = skill._extract_shortcut_name(
-            "tell me something",
-            {}
-        )
+        result = skill._extract_shortcut_name("tell me something", {})
 
         assert result is None
 
@@ -76,7 +67,7 @@ class TestShortcutsSkill:
         skill = ShortcutsSkill()
 
         # Mock empty output
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate = AsyncMock(return_value=(b"", b""))
@@ -85,7 +76,10 @@ class TestShortcutsSkill:
             result = await skill._list_shortcuts()
 
             assert result.success is True
-            assert "don't have" in result.response_text.lower() or "no shortcuts" in result.response_text.lower()
+            assert (
+                "don't have" in result.response_text.lower()
+                or "no shortcuts" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_list_shortcuts_with_items(self):
@@ -95,7 +89,7 @@ class TestShortcutsSkill:
         # Mock output with shortcuts
         output = b"Send Message\nOpen Browser\nPlay Music"
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate = AsyncMock(return_value=(output, b""))
@@ -114,7 +108,7 @@ class TestShortcutsSkill:
         """Test listing shortcuts when command fails."""
         skill = ShortcutsSkill()
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 1
             mock_process.communicate = AsyncMock(return_value=(b"", b"Shortcuts not available"))
@@ -123,14 +117,17 @@ class TestShortcutsSkill:
             result = await skill._list_shortcuts()
 
             assert result.success is False
-            assert "couldn't" in result.response_text.lower() or "shortcuts" in result.response_text.lower()
+            assert (
+                "couldn't" in result.response_text.lower()
+                or "shortcuts" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_run_shortcut_success(self):
         """Test successfully running a shortcut."""
         skill = ShortcutsSkill()
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate = AsyncMock(return_value=(b"Shortcut executed", b""))
@@ -146,7 +143,7 @@ class TestShortcutsSkill:
         """Test running shortcut with input parameter."""
         skill = ShortcutsSkill()
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate = AsyncMock(return_value=(b"Result: Processed", b""))
@@ -165,13 +162,17 @@ class TestShortcutsSkill:
         """Test running a shortcut that doesn't exist."""
         skill = ShortcutsSkill()
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 1
-            mock_process.communicate = AsyncMock(return_value=(b"", b"Shortcut 'My Shortcut' not found"))
+            mock_process.communicate = AsyncMock(
+                return_value=(b"", b"Shortcut 'My Shortcut' not found")
+            )
             mock_subproc.return_value = mock_process
 
-            with patch.object(skill, '_find_similar_shortcuts', new=AsyncMock(return_value=["Similar Shortcut"])):
+            with patch.object(
+                skill, "_find_similar_shortcuts", new=AsyncMock(return_value=["Similar Shortcut"])
+            ):
                 result = await skill._run_shortcut("My Shortcut", {})
 
                 assert result.success is False
@@ -182,7 +183,7 @@ class TestShortcutsSkill:
         """Test handling shortcut execution error."""
         skill = ShortcutsSkill()
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 1
             mock_process.communicate = AsyncMock(return_value=(b"", b"Execution error"))
@@ -191,14 +192,17 @@ class TestShortcutsSkill:
             result = await skill._run_shortcut("My Shortcut", {})
 
             assert result.success is False
-            assert "couldn't" in result.response_text.lower() or "error" in result.response_text.lower()
+            assert (
+                "couldn't" in result.response_text.lower()
+                or "error" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_find_similar_shortcuts(self):
         """Test finding similar shortcuts."""
         skill = ShortcutsSkill()
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             output = b"Send Message\nOpen Browser\nPlay Music"
             mock_process = MagicMock()
             mock_process.returncode = 0
@@ -215,7 +219,7 @@ class TestShortcutsSkill:
         """Test finding similar shortcuts with no matches."""
         skill = ShortcutsSkill()
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             output = b"Send Message\nOpen Browser\nPlay Music"
             mock_process = MagicMock()
             mock_process.returncode = 0
@@ -241,10 +245,16 @@ class TestShortcutsSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, '_list_shortcuts', new=AsyncMock(return_value=SkillResult(
-            success=True,
-            response_text="You have 3 shortcuts",
-        ))):
+        with patch.object(
+            skill,
+            "_list_shortcuts",
+            new=AsyncMock(
+                return_value=SkillResult(
+                    success=True,
+                    response_text="You have 3 shortcuts",
+                )
+            ),
+        ):
             result = await skill.execute(context)
 
             assert result.success is True
@@ -263,10 +273,16 @@ class TestShortcutsSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, '_run_shortcut', new=AsyncMock(return_value=SkillResult(
-            success=True,
-            response_text="Running shortcut 'My Shortcut'",
-        ))):
+        with patch.object(
+            skill,
+            "_run_shortcut",
+            new=AsyncMock(
+                return_value=SkillResult(
+                    success=True,
+                    response_text="Running shortcut 'My Shortcut'",
+                )
+            ),
+        ):
             result = await skill.execute(context)
 
             assert result.success is True
@@ -304,10 +320,16 @@ class TestShortcutsSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, '_list_shortcuts', new=AsyncMock(return_value=SkillResult(
-            success=True,
-            response_text="You have 3 shortcuts",
-        ))):
+        with patch.object(
+            skill,
+            "_list_shortcuts",
+            new=AsyncMock(
+                return_value=SkillResult(
+                    success=True,
+                    response_text="You have 3 shortcuts",
+                )
+            ),
+        ):
             result = await skill.execute(context)
 
             assert result.success is True
@@ -359,9 +381,9 @@ class TestShortcutsSkillSecurity:
 
         # The shortcuts command uses subprocess with list arguments,
         # which should prevent command injection
-        dangerous_name = 'My Shortcut; rm -rf /'
+        dangerous_name = "My Shortcut; rm -rf /"
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate = AsyncMock(return_value=(b"", b""))
@@ -383,9 +405,9 @@ class TestShortcutsSkillSecurity:
         """Test that input parameter is passed safely."""
         skill = ShortcutsSkill()
 
-        dangerous_input = 'test; malicious command'
+        dangerous_input = "test; malicious command"
 
-        with patch('asyncio.create_subprocess_exec') as mock_subproc:
+        with patch("asyncio.create_subprocess_exec") as mock_subproc:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate = AsyncMock(return_value=(b"", b""))

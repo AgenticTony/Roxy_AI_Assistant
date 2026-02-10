@@ -6,16 +6,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from roxy.brain.llm_clients import LLMResponse
 from roxy.skills.base import Permission, SkillContext, StubMemoryManager
 from roxy.skills.productivity.email import EmailSkill
-from roxy.brain.llm_clients import LLMResponse
 
 
 # Fixtures
 @pytest.fixture
 def skill_context():
     """Create a skill context for testing."""
-    from roxy.config import LocalLLMConfig, CloudLLMConfig, PrivacyConfig, RoxyConfig
+    from roxy.config import CloudLLMConfig, LocalLLMConfig, PrivacyConfig, RoxyConfig
 
     config = RoxyConfig(
         name="TestRoxy",
@@ -27,11 +27,13 @@ def skill_context():
 
     # Create mock LLM client
     mock_llm_client = MagicMock()
-    mock_llm_client.generate = AsyncMock(return_value=LLMResponse(
-        content="This email from John Smith discusses the project timeline and requests a meeting by Friday to review deliverables.",
-        model="qwen3:8b",
-        provider="local",
-    ))
+    mock_llm_client.generate = AsyncMock(
+        return_value=LLMResponse(
+            content="This email from John Smith discusses the project timeline and requests a meeting by Friday to review deliverables.",
+            model="qwen3:8b",
+            provider="local",
+        )
+    )
 
     return SkillContext(
         user_input="test input",
@@ -64,7 +66,7 @@ Key action items:
 Please let me know your availability for the meeting.
 
 Best regards,
-John"""
+John""",
     }
 
 
@@ -168,8 +170,10 @@ class TestEmailSkill:
         skill_context.user_input = "summarize my latest email"
 
         # Mock get_latest_emails and summarize_email
-        with patch.object(skill, "get_latest_emails", new_callable=AsyncMock) as mock_emails, \
-             patch.object(skill, "summarize_email", new_callable=AsyncMock) as mock_summarize:
+        with (
+            patch.object(skill, "get_latest_emails", new_callable=AsyncMock) as mock_emails,
+            patch.object(skill, "summarize_email", new_callable=AsyncMock) as mock_summarize,
+        ):
             mock_emails.return_value = [
                 {
                     "subject": "Test Email",
@@ -178,7 +182,9 @@ class TestEmailSkill:
                     "message_id": "test-123",
                 }
             ]
-            mock_summarize.return_value = "From: test@example.com\nSubject: Test Email\n\nTest summary"
+            mock_summarize.return_value = (
+                "From: test@example.com\nSubject: Test Email\n\nTest summary"
+            )
 
             result = await skill.execute(skill_context)
 

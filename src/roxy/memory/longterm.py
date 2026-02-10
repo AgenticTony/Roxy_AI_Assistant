@@ -293,11 +293,13 @@ class LongTermMemory:
                     continue
                 for key, value in self._mem0_client[cat].items():
                     if query.lower() in key.lower() or query.lower() in value.lower():
-                        results.append({
-                            "content": f"{key}: {value}",
-                            "metadata": {"category": cat},
-                            "score": 0.5,
-                        })
+                        results.append(
+                            {
+                                "content": f"{key}: {value}",
+                                "metadata": {"category": cat},
+                                "score": 0.5,
+                            }
+                        )
                         if len(results) >= limit:
                             return results
             return results
@@ -337,7 +339,9 @@ class LongTermMemory:
         if self._use_mem0:
             # With Mem0, we'd search and delete
             try:
-                results = self._mem0_client.search(f"category:{category}", user_id="roxy", limit=1000)
+                results = self._mem0_client.search(
+                    f"category:{category}", user_id="roxy", limit=1000
+                )
                 for result in results:
                     memory_id = result.get("id")
                     if memory_id:

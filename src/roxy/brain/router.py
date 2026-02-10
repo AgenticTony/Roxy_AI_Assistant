@@ -7,10 +7,9 @@ and user privacy preferences.
 from __future__ import annotations
 
 import logging
-from typing import Literal
 
-from .llm_clients import LLMClient, LLMResponse, OllamaClient, CloudLLMClient, ConfidenceScorer
-from .privacy import PrivacyGateway, ConsentMode, RedactionResult
+from .llm_clients import CloudLLMClient, ConfidenceScorer, LLMResponse, OllamaClient
+from .privacy import PrivacyGateway
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,9 @@ class ConfidenceRouter:
         # Create confidence scorer with smaller model
         self.scorer = ConfidenceScorer(
             client=local_client,
-            model=local_client.router_model if hasattr(local_client, "router_model") else "qwen3:0.6b",
+            model=local_client.router_model
+            if hasattr(local_client, "router_model")
+            else "qwen3:0.6b",
         )
 
         # Statistics
@@ -174,7 +175,9 @@ class ConfidenceRouter:
         redaction_result = self.privacy.redact(request)
 
         if redaction_result.was_redacted:
-            logger.info(f"Redacted {len(redaction_result.pii_matches)} PII instances before cloud call")
+            logger.info(
+                f"Redacted {len(redaction_result.pii_matches)} PII instances before cloud call"
+            )
 
         try:
             # Send redacted request to cloud
@@ -186,7 +189,9 @@ class ConfidenceRouter:
 
             # Restore PII in response
             if redaction_result.was_redacted:
-                response.content = self.privacy.restore(response.content, redaction_result.pii_matches)
+                response.content = self.privacy.restore(
+                    response.content, redaction_result.pii_matches
+                )
                 logger.debug("Restored PII in cloud response")
 
             # Log the cloud request
@@ -216,8 +221,12 @@ class ConfidenceRouter:
             "local_requests": self._local_requests,
             "cloud_requests": self._cloud_requests,
             "blocked_requests": self._blocked_requests,
-            "local_rate": self._local_requests / self._total_requests if self._total_requests > 0 else 0.0,
-            "cloud_rate": self._cloud_requests / self._total_requests if self._total_requests > 0 else 0.0,
+            "local_rate": self._local_requests / self._total_requests
+            if self._total_requests > 0
+            else 0.0,
+            "cloud_rate": self._cloud_requests / self._total_requests
+            if self._total_requests > 0
+            else 0.0,
         }
 
     def reset_statistics(self) -> None:

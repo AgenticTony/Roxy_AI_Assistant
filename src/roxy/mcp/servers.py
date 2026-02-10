@@ -20,11 +20,11 @@ from .server_config import (
     ToolCallResult,
 )
 
-# Re-export the main manager class
-from .server_manager import MCPServerManager
-
 # Re-export health checker for direct use
 from .server_health import ServerHealthChecker
+
+# Re-export the main manager class
+from .server_manager import MCPServerManager
 
 __all__ = [
     "MCPServerManager",

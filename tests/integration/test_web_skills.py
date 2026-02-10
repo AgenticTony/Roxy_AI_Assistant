@@ -5,15 +5,15 @@ Tests web search, browsing, and web-based skills with privacy gateway.
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
+from unittest.mock import MagicMock
 
+import pytest
+
+from roxy.brain.privacy import ConsentMode, PrivacyGateway
 from roxy.config import RoxyConfig
-from roxy.skills.registry import SkillRegistry
 from roxy.skills.base import SkillContext, SkillResult
-from roxy.brain.privacy import PrivacyGateway, ConsentMode
+from roxy.skills.registry import SkillRegistry
 
 
 class MockWebSearchSkill:

@@ -5,11 +5,9 @@ Tests international phone numbers, contextual PII, Swedish personnummer, and add
 
 from __future__ import annotations
 
-import re
-
 import pytest
 
-from roxy.brain.privacy import PrivacyGateway, RedactionResult
+from roxy.brain.privacy import PrivacyGateway
 
 
 class TestInternationalPhoneDetection:
@@ -255,7 +253,9 @@ class TestPrivacyGateway:
         result = gateway.redact(text)
 
         # Email and Swedish phone should be redacted
-        assert "REDACTED_EMAIL" in result.redacted_text or "test@test.com" not in result.redacted_text
+        assert (
+            "REDACTED_EMAIL" in result.redacted_text or "test@test.com" not in result.redacted_text
+        )
         assert "REDACTED" in result.redacted_text
 
         # SSN should NOT be redacted (not in pattern list)

@@ -9,8 +9,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import subprocess
+from collections.abc import AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
-from typing import AsyncGenerator
 
 import numpy as np
 import sounddevice as sd
@@ -84,13 +84,16 @@ class TextToSpeech:
         if not use_fallback:
             self._check_kokoro_available()
 
-        logger.debug(f"TextToSpeech initialized with voice='{voice}', speed={speed}, "
-                    f"use_fallback={use_fallback}, kokoro_available={self._kokoro_available}")
+        logger.debug(
+            f"TextToSpeech initialized with voice='{voice}', speed={speed}, "
+            f"use_fallback={use_fallback}, kokoro_available={self._kokoro_available}"
+        )
 
     def _check_kokoro_available(self) -> None:
         """Check if MLX-Audio Kokoro is available."""
         try:
             import mlx_audio
+
             self._kokoro_available = True
             logger.info("MLX-Audio Kokoro TTS is available")
         except ImportError:
@@ -291,7 +294,7 @@ class TextToSpeech:
                     logger.debug("Playback stopped by request")
                     break
 
-                chunk = audio[i:i + chunk_size]
+                chunk = audio[i : i + chunk_size]
                 self._stream.write(chunk)
 
                 # Small sleep to allow event loop processing

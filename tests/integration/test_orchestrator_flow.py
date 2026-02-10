@@ -6,12 +6,13 @@ skill dispatch, and response generation.
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from roxy.config import RoxyConfig
+import pytest
+
 from roxy.brain.orchestrator import RoxyOrchestrator
-from roxy.skills.base import SkillContext, SkillResult, RoxySkill, Permission
+from roxy.config import RoxyConfig
+from roxy.skills.base import RoxySkill, SkillContext, SkillResult
 from roxy.skills.registry import SkillRegistry
 
 

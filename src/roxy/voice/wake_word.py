@@ -9,10 +9,13 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
+
+    import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +60,10 @@ class PorcupineBackend(WakeWordBackend):
         """
         try:
             import pvporcupine
+
             self._pvporcupine = pvporcupine
         except ImportError as e:
-            raise RuntimeError(
-                "pvporcupine not installed. Install with: uv add pvporcupine"
-            ) from e
+            raise RuntimeError("pvporcupine not installed. Install with: uv add pvporcupine") from e
 
         self._access_key = access_key
         self._sensitivity = sensitivity
@@ -77,8 +79,8 @@ class PorcupineBackend(WakeWordBackend):
         Uses built-in "porcupine" keyword (always available) or custom keyword
         from Picovoice console for "hey roxy".
         """
-        import sounddevice as sd
         import numpy as np
+        import sounddevice as sd
 
         # Create Porcupine instance
         # Use "porcupine" built-in keyword as default (always available)
@@ -99,7 +101,9 @@ class PorcupineBackend(WakeWordBackend):
         frame_length = self._handle.frame_length
         sample_rate = self._handle.sample_rate
 
-        def audio_callback(indata: np.ndarray, frames: int, time_info: dict, status: sd.CallbackFlags) -> None:
+        def audio_callback(
+            indata: np.ndarray, frames: int, time_info: dict, status: sd.CallbackFlags
+        ) -> None:
             """Audio stream callback - processes audio and detects wake word."""
             if not self._running:
                 return
@@ -168,6 +172,7 @@ class OpenWakeWordBackend(WakeWordBackend):
         """
         try:
             import openwakeword
+
             self._oww = openwakeword
         except ImportError as e:
             raise RuntimeError(
@@ -181,13 +186,16 @@ class OpenWakeWordBackend(WakeWordBackend):
         self._model = None
         self._stream = None
 
-        logger.debug(f"OpenWakeWordBackend initialized (model={model_name}, sensitivity={sensitivity})")
+        logger.debug(
+            f"OpenWakeWordBackend initialized (model={model_name}, sensitivity={sensitivity})"
+        )
 
     async def start(self, callback: Callable[[], Awaitable[None]]) -> None:
         """Start listening for wake word using OpenWakeWord."""
-        import sounddevice as sd
-        import numpy as np
         from pathlib import Path
+
+        import numpy as np
+        import sounddevice as sd
 
         # Load model
         try:
@@ -212,7 +220,9 @@ class OpenWakeWordBackend(WakeWordBackend):
 
         self._running = True
 
-        def audio_callback(indata: np.ndarray, frames: int, time_info: dict, status: sd.CallbackFlags) -> None:
+        def audio_callback(
+            indata: np.ndarray, frames: int, time_info: dict, status: sd.CallbackFlags
+        ) -> None:
             """Audio callback for OpenWakeWord detection."""
             if not self._running:
                 return
@@ -226,7 +236,9 @@ class OpenWakeWordBackend(WakeWordBackend):
                 score = predictions[self._model_name]
                 threshold = 1.0 - self._sensitivity
                 if score >= threshold:
-                    logger.info(f"OpenWakeWord: '{self._model_name}' detected! (score: {score:.3f})")
+                    logger.info(
+                        f"OpenWakeWord: '{self._model_name}' detected! (score: {score:.3f})"
+                    )
                     asyncio.get_event_loop().call_soon_threadsafe(
                         lambda: asyncio.ensure_future(callback())
                     )
@@ -282,32 +294,34 @@ class WhisperWakeWordBackend(WakeWordBackend):
         self._stream = None
         self._whisper = None
 
-        logger.debug(f"WhisperWakeWordBackend initialized (phrase='{wake_phrase}', sensitivity={sensitivity})")
+        logger.debug(
+            f"WhisperWakeWordBackend initialized (phrase='{wake_phrase}', sensitivity={sensitivity})"
+        )
 
     async def start(self, callback: Callable[[], Awaitable[None]]) -> None:
         """Start energy-based wake word detection with Whisper verification."""
-        import sounddevice as sd
         import numpy as np
+        import sounddevice as sd
 
         self._running = True
         sample_rate = 16000
         chunk_duration = 2.0  # seconds
         energy_threshold = 0.01 + (1.0 - self._sensitivity) * 0.05
 
-        def audio_callback(indata: np.ndarray, frames: int, time_info: dict, status: sd.CallbackFlags) -> None:
+        def audio_callback(
+            indata: np.ndarray, frames: int, time_info: dict, status: sd.CallbackFlags
+        ) -> None:
             """Audio callback - detects speech energy and transcribes with Whisper."""
             if not self._running:
                 return
 
             # Calculate RMS energy
-            energy = np.sqrt(np.mean(indata ** 2))
+            energy = np.sqrt(np.mean(indata**2))
 
             if energy > energy_threshold:
                 # Someone is speaking - check if it's the wake phrase
                 asyncio.get_event_loop().call_soon_threadsafe(
-                    lambda: asyncio.ensure_future(
-                        self._check_wake_phrase(indata.copy(), callback)
-                    )
+                    lambda: asyncio.ensure_future(self._check_wake_phrase(indata.copy(), callback))
                 )
 
         self._stream = sd.InputStream(
@@ -320,7 +334,9 @@ class WhisperWakeWordBackend(WakeWordBackend):
         self._stream.start()
         logger.info("Whisper-based wake word detection started (fallback mode)")
 
-    async def _check_wake_phrase(self, audio_data: np.ndarray, callback: Callable[[], Awaitable[None]]) -> None:
+    async def _check_wake_phrase(
+        self, audio_data: np.ndarray, callback: Callable[[], Awaitable[None]]
+    ) -> None:
         """Transcribe audio chunk and check for wake phrase.
 
         Args:
@@ -328,8 +344,8 @@ class WhisperWakeWordBackend(WakeWordBackend):
             callback: Callback to invoke if wake phrase is found.
         """
         try:
-            from faster_whisper import WhisperModel
             import numpy as np
+            from faster_whisper import WhisperModel
 
             # Lazy-load Whisper model
             if self._whisper is None:
@@ -478,7 +494,9 @@ class WakeWordDetector:
             RuntimeError: If no backend is available or already listening.
         """
         if self._backend is None:
-            raise RuntimeError("No wake word backend available. Check configuration and dependencies.")
+            raise RuntimeError(
+                "No wake word backend available. Check configuration and dependencies."
+            )
 
         if self._backend.is_running:
             raise RuntimeError("Wake word detector is already listening")

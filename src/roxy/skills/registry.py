@@ -148,10 +148,7 @@ class SkillRegistry:
                         continue
 
                     # Check if it's a RoxySkill subclass and defined in this module
-                    if (
-                        issubclass(obj, RoxySkill)
-                        and obj.__module__ == module_name
-                    ):
+                    if issubclass(obj, RoxySkill) and obj.__module__ == module_name:
                         self.register(obj)
 
             except Exception as e:
@@ -178,9 +175,7 @@ class SkillRegistry:
             current = current.parent
         return None
 
-    def find_skill(
-        self, intent: str, parameters: dict[str, Any]
-    ) -> tuple[Any | None, float]:
+    def find_skill(self, intent: str, parameters: dict[str, Any]) -> tuple[Any | None, float]:
         """
         Find the best matching skill for a given intent.
 
@@ -239,9 +234,7 @@ class SkillRegistry:
                 "name": getattr(skill_class, "name", skill_name),
                 "description": getattr(skill_class, "description", ""),
                 "triggers": getattr(skill_class, "triggers", []),
-                "permissions": [
-                    p.value for p in getattr(skill_class, "permissions", [])
-                ],
+                "permissions": [p.value for p in getattr(skill_class, "permissions", [])],
                 "requires_cloud": getattr(skill_class, "requires_cloud", False),
                 "class_name": skill_class.__name__,
                 "module": skill_class.__module__,

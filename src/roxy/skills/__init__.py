@@ -4,24 +4,21 @@ Contains the base skill class and all skill implementations.
 """
 
 from roxy.skills.base import (
+    HookType,
+    MemoryManager,
     Permission,
+    RoxySkill,
     SkillContext,
     SkillResult,
-    MemoryManager,
     StubMemoryManager,
-    RoxySkill,
-    HookType,
-    register_hook,
     clear_hooks,
     get_hooks,
+    register_hook,
 )
 
-# Skill registry and permissions
-from roxy.skills.registry import SkillRegistry, get_registry
+# Developer skills
+from roxy.skills.dev import ClaudeCodeSkill, GitOpsSkill, ProjectManagerSkill
 from roxy.skills.permissions import PermissionManager, get_permission_manager
-
-# Web skills
-from roxy.skills.web import WebSearchSkill, BrowseSkill, FlightSearchSkill
 
 # Productivity skills
 from roxy.skills.productivity import (
@@ -31,16 +28,19 @@ from roxy.skills.productivity import (
     RemindersSkill,
 )
 
-# Developer skills
-from roxy.skills.dev import GitOpsSkill, ClaudeCodeSkill, ProjectManagerSkill
+# Skill registry and permissions
+from roxy.skills.registry import SkillRegistry, get_registry
 
 # System skills
 from roxy.skills.system.app_launcher import AppLauncherSkill
-from roxy.skills.system.file_search import FileSearchSkill
-from roxy.skills.system.window_manager import WindowManagerSkill
-from roxy.skills.system.system_info import SystemInfoSkill
 from roxy.skills.system.clipboard import ClipboardSkill
+from roxy.skills.system.file_search import FileSearchSkill
 from roxy.skills.system.shortcuts import ShortcutsSkill
+from roxy.skills.system.system_info import SystemInfoSkill
+from roxy.skills.system.window_manager import WindowManagerSkill
+
+# Web skills
+from roxy.skills.web import BrowseSkill, FlightSearchSkill, WebSearchSkill
 
 __all__ = [
     # Base classes

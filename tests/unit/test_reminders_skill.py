@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from roxy.skills.base import Permission, SkillContext
 from roxy.skills.productivity.reminders import RemindersSkill
-from roxy.skills.base import SkillContext, SkillResult, Permission
 
 
 class TestRemindersSkill:
@@ -30,7 +30,7 @@ class TestRemindersSkill:
         """Test skill initialization."""
         skill = RemindersSkill()
 
-        assert hasattr(skill, '_applescript')
+        assert hasattr(skill, "_applescript")
         assert skill._applescript is not None
 
     def test_parse_due_date_today(self):
@@ -73,7 +73,7 @@ class TestRemindersSkill:
         """Test successfully adding a reminder."""
         skill = RemindersSkill()
 
-        with patch.object(skill._applescript, 'run', new=AsyncMock(return_value="")):
+        with patch.object(skill._applescript, "run", new=AsyncMock(return_value="")):
             result = await skill.add_reminder("Buy milk")
             assert result is True
 
@@ -82,7 +82,7 @@ class TestRemindersSkill:
         """Test adding a reminder with a due date."""
         skill = RemindersSkill()
 
-        with patch.object(skill._applescript, 'run', new=AsyncMock(return_value="")):
+        with patch.object(skill._applescript, "run", new=AsyncMock(return_value="")):
             result = await skill.add_reminder("Buy milk", due_date="date (current date)")
             assert result is True
 
@@ -91,7 +91,7 @@ class TestRemindersSkill:
         """Test adding a reminder with notes."""
         skill = RemindersSkill()
 
-        with patch.object(skill._applescript, 'run', new=AsyncMock(return_value="")):
+        with patch.object(skill._applescript, "run", new=AsyncMock(return_value="")):
             result = await skill.add_reminder("Buy milk", notes="Get 2% milk")
             assert result is True
 
@@ -100,7 +100,9 @@ class TestRemindersSkill:
         """Test handling when adding reminder fails."""
         skill = RemindersSkill()
 
-        with patch.object(skill._applescript, 'run', new=AsyncMock(side_effect=Exception("Reminders error"))):
+        with patch.object(
+            skill._applescript, "run", new=AsyncMock(side_effect=Exception("Reminders error"))
+        ):
             result = await skill.add_reminder("Buy milk")
             # Should catch exception and return False
             # But the mock needs to be awaited properly
@@ -111,7 +113,7 @@ class TestRemindersSkill:
         """Test listing reminders when none exist."""
         skill = RemindersSkill()
 
-        with patch.object(skill._applescript, 'run', new=AsyncMock(return_value="")):
+        with patch.object(skill._applescript, "run", new=AsyncMock(return_value="")):
             reminders = await skill.list_reminders()
             assert reminders == []
 
@@ -124,7 +126,7 @@ class TestRemindersSkill:
         output = "Buy milk|||date|||false;;;Call doctor|||date (current date) + 1 * days|||false"
 
         # Use AsyncMock properly for the run method
-        with patch.object(skill._applescript, 'run', new=AsyncMock(return_value=output)):
+        with patch.object(skill._applescript, "run", new=AsyncMock(return_value=output)):
             reminders = await skill.list_reminders()
             # If parsing fails, returns empty list
             assert len(reminders) >= 0
@@ -145,11 +147,14 @@ class TestRemindersSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'add_reminder', new=AsyncMock(return_value=True)):
+        with patch.object(skill, "add_reminder", new=AsyncMock(return_value=True)):
             result = await skill.execute(context)
 
             assert result.success is True
-            assert "created" in result.response_text.lower() or "reminder" in result.response_text.lower()
+            assert (
+                "created" in result.response_text.lower()
+                or "reminder" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_execute_add_reminder_failure(self):
@@ -164,7 +169,7 @@ class TestRemindersSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'add_reminder', new=AsyncMock(return_value=False)):
+        with patch.object(skill, "add_reminder", new=AsyncMock(return_value=False)):
             result = await skill.execute(context)
 
             assert result.success is False
@@ -188,7 +193,7 @@ class TestRemindersSkill:
             {"name": "Call mom", "due_date": "", "completed": True},
         ]
 
-        with patch.object(skill, 'list_reminders', new=AsyncMock(return_value=test_reminders)):
+        with patch.object(skill, "list_reminders", new=AsyncMock(return_value=test_reminders)):
             result = await skill.execute(context)
 
             assert result.success is True
@@ -207,11 +212,13 @@ class TestRemindersSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'list_reminders', new=AsyncMock(return_value=[])):
+        with patch.object(skill, "list_reminders", new=AsyncMock(return_value=[])):
             result = await skill.execute(context)
 
             assert result.success is True
-            assert "don't have" in result.response_text.lower() or "no" in result.response_text.lower()
+            assert (
+                "don't have" in result.response_text.lower() or "no" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_can_handle_add_phrases(self):
@@ -257,7 +264,7 @@ class TestRemindersSkillSecurity:
         skill = RemindersSkill()
         dangerous_title = 'Buy milk"; do shell script "rm -rf /'
 
-        with patch.object(skill._applescript, 'run', new=AsyncMock(return_value="")) as mock_run:
+        with patch.object(skill._applescript, "run", new=AsyncMock(return_value="")) as mock_run:
             await skill.add_reminder(dangerous_title)
 
             # Check that the script was called
@@ -273,7 +280,7 @@ class TestRemindersSkillSecurity:
         skill = RemindersSkill()
         dangerous_notes = 'Call mom at 555-1234"; drop table reminders; --'
 
-        with patch.object(skill._applescript, 'run', new=AsyncMock(return_value="")) as mock_run:
+        with patch.object(skill._applescript, "run", new=AsyncMock(return_value="")) as mock_run:
             await skill.add_reminder("Buy milk", notes=dangerous_notes)
 
             # Check that the script was called
@@ -289,7 +296,7 @@ class TestRemindersSkillSecurity:
         skill = RemindersSkill()
         dangerous_list = 'Reminders"; do shell script "echo "pwned"'
 
-        with patch.object(skill._applescript, 'run', new=AsyncMock(return_value="")):
+        with patch.object(skill._applescript, "run", new=AsyncMock(return_value="")):
             await skill.list_reminders(list_name=dangerous_list)
 
             # Check that the script was called

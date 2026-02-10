@@ -19,13 +19,13 @@ import json
 import logging
 import re
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
 from agno.tools.function import Function
 
-from ..skills.base import Permission, RoxySkill, SkillContext, SkillResult
+from ..skills.base import RoxySkill, SkillContext, SkillResult
 from ..skills.registry import SkillRegistry
 
 logger = logging.getLogger(__name__)
@@ -262,8 +262,9 @@ class SkillToolAdapter:
                 intent = str(intent)
 
             # Extract additional parameters for the skill
-            skill_params = {k: v for k, v in parameters.items()
-                          if k not in ("user_input", "intent")}
+            skill_params = {
+                k: v for k, v in parameters.items() if k not in ("user_input", "intent")
+            }
 
             # Create SkillContext with orchestrator dependencies
             context = SkillContext(
@@ -277,7 +278,7 @@ class SkillToolAdapter:
             )
 
             # Inject privacy gateway if skill needs it
-            if hasattr(skill, 'privacy_gateway') and skill.privacy_gateway is None:
+            if hasattr(skill, "privacy_gateway") and skill.privacy_gateway is None:
                 skill.privacy_gateway = self.orchestrator.privacy
 
             # Execute the skill with timeout protection
@@ -285,8 +286,7 @@ class SkillToolAdapter:
             stats.total_calls += 1
 
             result: SkillResult = await asyncio.wait_for(
-                skill._execute_with_hooks(context),
-                timeout=self.skill_timeout
+                skill._execute_with_hooks(context), timeout=self.skill_timeout
             )
 
             # Update stats on success
@@ -301,7 +301,7 @@ class SkillToolAdapter:
 
             return result.response_text
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             stats.failures += 1
             stats.consecutive_failures += 1
             stats.last_failure = datetime.now()
@@ -407,10 +407,7 @@ class SkillToolAdapter:
                 "last_success": stats.last_success.isoformat() if stats.last_success else None,
             }
 
-        return {
-            name: self.get_skill_stats(name)
-            for name in self._stats
-        }
+        return {name: self.get_skill_stats(name) for name in self._stats}
 
     def reset_skill_stats(self, skill_name: str) -> None:
         """Reset statistics for a specific skill.
@@ -521,7 +518,10 @@ For 'general_conversation', set confidence to 0.5 and minimal parameters.
             return {
                 "intent": "general_conversation",
                 "confidence": 0.5,
-                "parameters": {"user_input": str(user_input) or "", "intent": "general_conversation"},
+                "parameters": {
+                    "user_input": str(user_input) or "",
+                    "intent": "general_conversation",
+                },
             }
 
         prompt = f"{self._classification_prompt}\n\nUser input: {user_input}"
@@ -557,9 +557,7 @@ For 'general_conversation', set confidence to 0.5 and minimal parameters.
             parameters.setdefault("user_input", user_input)
             parameters.setdefault("intent", intent)
 
-            logger.debug(
-                f"Classified intent: {intent} (confidence: {confidence:.2f})"
-            )
+            logger.debug(f"Classified intent: {intent} (confidence: {confidence:.2f})")
 
             return {
                 "intent": intent,
@@ -593,8 +591,8 @@ For 'general_conversation', set confidence to 0.5 and minimal parameters.
         # Pattern 1: Extract JSON object with content (nested braces)
         patterns = [
             r'\{[^{}]*"intent"[^{}]*\}',  # Simple single-level
-            r'\{(?:[^{}]|\{[^{}]*\})*\}',  # Nested up to 2 levels
-            r'\{(?:[^{}]|\{[^{}]*\}|\{\{[^{}]*\}\})*\}',  # Nested up to 3 levels
+            r"\{(?:[^{}]|\{[^{}]*\})*\}",  # Nested up to 2 levels
+            r"\{(?:[^{}]|\{[^{}]*\}|\{\{[^{}]*\}\})*\}",  # Nested up to 3 levels
         ]
 
         for pattern in patterns:
@@ -606,7 +604,7 @@ For 'general_conversation', set confidence to 0.5 and minimal parameters.
                     continue
 
         # Pattern 2: Look for code blocks with JSON
-        code_block_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+        code_block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", content, re.DOTALL)
         if code_block_match:
             try:
                 return json.loads(code_block_match.group(1))

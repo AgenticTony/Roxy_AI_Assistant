@@ -10,7 +10,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import click
 from rich.console import Console
 from rich.prompt import Confirm
 
@@ -145,10 +144,7 @@ class PermissionManager:
 
         # Display skill information
         console.print()
-        console.print(
-            f"[bold cyan]Skill: {skill.name}[/bold cyan]"
-            f"\n{skill.description}"
-        )
+        console.print(f"[bold cyan]Skill: {skill.name}[/bold cyan]\n{skill.description}")
 
         # Request each missing permission
         for permission in missing:

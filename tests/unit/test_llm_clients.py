@@ -7,10 +7,10 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from roxy.brain.llm_clients import (
-    LLMResponse,
-    OllamaClient,
     CloudLLMClient,
     ConfidenceScorer,
+    LLMResponse,
+    OllamaClient,
 )
 
 

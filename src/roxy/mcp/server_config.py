@@ -9,7 +9,6 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -19,8 +18,8 @@ class ServerTransport(str, Enum):
     """Transport types for MCP server connections."""
 
     STDIO = "stdio"  # Standard input/output (local processes)
-    SSE = "sse"      # Server-Sent Events (HTTP-based)
-    HTTP = "http"    # HTTP-based (for APIs)
+    SSE = "sse"  # Server-Sent Events (HTTP-based)
+    HTTP = "http"  # HTTP-based (for APIs)
 
 
 class ServerStatus(str, Enum):
@@ -65,7 +64,7 @@ class ServerConnection:
     config: ServerConfig
     status: ServerStatus = ServerStatus.STOPPED
     process: Any = None  # subprocess.Process for stdio servers
-    client: Any = None   # MCP client instance
+    client: Any = None  # MCP client instance
     tools: list[dict] = field(default_factory=list)
     error: str | None = None
     started_at: datetime | None = None

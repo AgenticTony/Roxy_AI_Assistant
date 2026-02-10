@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -60,10 +60,7 @@ class TestLongTermMemoryInit:
     @pytest.mark.asyncio
     async def test_init_custom_ollama_host(self, temp_data_dir: Path) -> None:
         """Test custom Ollama host."""
-        memory = LongTermMemory(
-            data_dir=str(temp_data_dir),
-            ollama_host="http://custom:11434"
-        )
+        memory = LongTermMemory(data_dir=str(temp_data_dir), ollama_host="http://custom:11434")
         assert memory._ollama_host == "http://custom:11434"
 
     @pytest.mark.asyncio
@@ -212,9 +209,7 @@ class TestPreferences:
         assert prefs.get("language") == "en"
 
     @pytest.mark.asyncio
-    async def test_preferences_persist(
-        self, temp_data_dir: Path
-    ) -> None:
+    async def test_preferences_persist(self, temp_data_dir: Path) -> None:
         """Test preferences persist across reinitialization."""
         # Use fallback mode for simpler testing
         # Create and set preference
@@ -335,14 +330,14 @@ class TestMem0Integration:
     """Tests for Mem0-specific integration."""
 
     @pytest.mark.asyncio
-    async def test_mem0_fallback_on_import_error(
-        self, temp_data_dir: Path
-    ) -> None:
+    async def test_mem0_fallback_on_import_error(self, temp_data_dir: Path) -> None:
         """Test fallback when mem0ai is not installed."""
         with patch.dict("sys.modules", {"mem0": None}):
             # Reimport to trigger the fallback
             import importlib
+
             import roxy.memory.longterm
+
             importlib.reload(roxy.memory.longterm)
 
             from roxy.memory.longterm import LongTermMemory as LTM
@@ -367,9 +362,7 @@ class TestErrorHandling:
     """Tests for error handling."""
 
     @pytest.mark.asyncio
-    async def test_operations_before_initialize_fail(
-        self, temp_data_dir: Path
-    ) -> None:
+    async def test_operations_before_initialize_fail(self, temp_data_dir: Path) -> None:
         """Test all operations fail before initialization."""
         memory = LongTermMemory(data_dir=str(temp_data_dir))
 

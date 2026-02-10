@@ -6,7 +6,6 @@ Provides window layout management and window manipulation capabilities.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
 
@@ -232,9 +231,7 @@ class WindowManagerSkill(RoxySkill):
             logger.error(f"Error applying Hammerspoon layout: {e}")
             return False
 
-    async def _apply_layout_applescript(
-        self, layout_name: str, user_input: str
-    ) -> SkillResult:
+    async def _apply_layout_applescript(self, layout_name: str, user_input: str) -> SkillResult:
         """
         Fallback: Apply layout using AppleScript.
 
@@ -273,7 +270,7 @@ class WindowManagerSkill(RoxySkill):
             # For other layouts, provide guidance
             return SkillResult(
                 success=False,
-                response_text=f"Window layouts work best with Hammerspoon installed. For now, you can use macOS split view by holding the green button on a window.",
+                response_text="Window layouts work best with Hammerspoon installed. For now, you can use macOS split view by holding the green button on a window.",
                 speak=True,
             )
 
@@ -281,6 +278,6 @@ class WindowManagerSkill(RoxySkill):
             logger.error(f"Error applying AppleScript layout: {e}")
             return SkillResult(
                 success=False,
-                response_text=f"Sorry, I couldn't apply the layout. Hammerspoon provides the best window management experience.",
+                response_text="Sorry, I couldn't apply the layout. Hammerspoon provides the best window management experience.",
                 speak=True,
             )

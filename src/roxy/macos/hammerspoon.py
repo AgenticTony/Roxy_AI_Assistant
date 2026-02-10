@@ -6,7 +6,6 @@ window management, audio control, and other system automation.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from typing import Any
@@ -176,10 +175,10 @@ class HammerspoonClient:
         local screenFrame = screen:frame()
 
         local frame = {{
-            x = screenFrame.x + (screenFrame.w * {unit['x']}),
-            y = screenFrame.y + (screenFrame.h * {unit['y']}),
-            w = screenFrame.w * {unit['w']},
-            h = screenFrame.h * {unit['h']}
+            x = screenFrame.x + (screenFrame.w * {unit["x"]}),
+            y = screenFrame.y + (screenFrame.h * {unit["y"]}),
+            w = screenFrame.w * {unit["w"]},
+            h = screenFrame.h * {unit["h"]}
         }}
 
         window:setFrame(frame)
@@ -405,10 +404,10 @@ class HammerspoonClient:
             True if successful.
         """
         # Escape the text for Lua
-        text_escaped = text.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        text_escaped = text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
 
         lua_code = f"""
-        {f'hs.application.get("{app_name}"):activate()' if app_name else ''}
+        {f'hs.application.get("{app_name}"):activate()' if app_name else ""}
         hs.eventtap.keyStrokes("{text_escaped}")
         return "Keys sent"
         """
@@ -420,9 +419,7 @@ class HammerspoonClient:
             logger.error(f"Error sending keys: {e}")
             return False
 
-    async def show_notification(
-        self, title: str, message: str, duration: float = 2.0
-    ) -> bool:
+    async def show_notification(self, title: str, message: str, duration: float = 2.0) -> bool:
         """
         Show a Hammerspoon notification.
 
@@ -434,8 +431,8 @@ class HammerspoonClient:
         Returns:
             True if successful.
         """
-        title_escaped = title.replace('\\', '\\\\').replace('"', '\\"')
-        message_escaped = message.replace('\\', '\\\\').replace('"', '\\"')
+        title_escaped = title.replace("\\", "\\\\").replace('"', '\\"')
+        message_escaped = message.replace("\\", "\\\\").replace('"', '\\"')
 
         lua_code = f"""
         hs.notify.new({{

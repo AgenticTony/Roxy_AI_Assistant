@@ -2,24 +2,24 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from roxy.skills.base import Permission, SkillContext, StubMemoryManager
 from roxy.skills.system.app_launcher import AppLauncherSkill
-from roxy.skills.system.file_search import FileSearchSkill
-from roxy.skills.system.window_manager import WindowManagerSkill
-from roxy.skills.system.system_info import SystemInfoSkill
 from roxy.skills.system.clipboard import ClipboardSkill
+from roxy.skills.system.file_search import FileSearchSkill
 from roxy.skills.system.shortcuts import ShortcutsSkill
+from roxy.skills.system.system_info import SystemInfoSkill
+from roxy.skills.system.window_manager import WindowManagerSkill
 
 
 # Fixtures
 @pytest.fixture
 def skill_context():
     """Create a skill context for testing."""
-    from roxy.config import LocalLLMConfig, CloudLLMConfig, PrivacyConfig, RoxyConfig
+    from roxy.config import CloudLLMConfig, LocalLLMConfig, PrivacyConfig, RoxyConfig
 
     config = RoxyConfig(
         name="TestRoxy",
@@ -317,10 +317,9 @@ class TestShortcutsSkill:
         """Test listing shortcuts."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(
-            b"Test Shortcut 1\nTest Shortcut 2\n",
-            b""
-        ))
+        mock_process.communicate = AsyncMock(
+            return_value=(b"Test Shortcut 1\nTest Shortcut 2\n", b"")
+        )
         mock_subprocess.return_value = mock_process
 
         skill_context.user_input = "list shortcuts"

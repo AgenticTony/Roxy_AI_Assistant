@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from roxy.brain.llm_clients import LLMResponse
 from roxy.skills.base import Permission, SkillContext, StubMemoryManager
 from roxy.skills.dev.git_ops import GitOpsSkill
-from roxy.brain.llm_clients import LLMResponse
 
 
 # Fixtures
 @pytest.fixture
 def skill_context():
     """Create a skill context for testing."""
-    from roxy.config import LocalLLMConfig, CloudLLMConfig, PrivacyConfig, RoxyConfig
+    from roxy.config import CloudLLMConfig, LocalLLMConfig, PrivacyConfig, RoxyConfig
 
     config = RoxyConfig(
         name="TestRoxy",
@@ -28,11 +27,13 @@ def skill_context():
 
     # Create mock LLM client
     mock_llm_client = MagicMock()
-    mock_llm_client.generate = AsyncMock(return_value=LLMResponse(
-        content="feat: add new authentication system",
-        model="qwen3:8b",
-        provider="local",
-    ))
+    mock_llm_client.generate = AsyncMock(
+        return_value=LLMResponse(
+            content="feat: add new authentication system",
+            model="qwen3:8b",
+            provider="local",
+        )
+    )
 
     return SkillContext(
         user_input="test input",

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -108,7 +107,10 @@ class TestSpeechToText:
                 MagicMock(text="Hello ", end=1.0),
                 MagicMock(text="world", end=2.0),
             ]
-            mock_model.transcribe.return_value = (mock_segments, MagicMock(language="en", language_probability=0.95))
+            mock_model.transcribe.return_value = (
+                mock_segments,
+                MagicMock(language="en", language_probability=0.95),
+            )
             stt._model = mock_model
 
             # Create a temporary audio file
@@ -153,7 +155,9 @@ class TestSpeechToText:
 
         with patch.object(stt, "_ensure_model_loaded", new_callable=AsyncMock):
             with patch.object(stt, "_record_audio", return_value=audio_data):
-                with patch.object(stt, "transcribe_file", return_value="Hello world") as mock_transcribe:
+                with patch.object(
+                    stt, "transcribe_file", return_value="Hello world"
+                ) as mock_transcribe:
                     result = await stt.listen_until_silence(timeout=5.0)
 
                     assert result == "Hello world"

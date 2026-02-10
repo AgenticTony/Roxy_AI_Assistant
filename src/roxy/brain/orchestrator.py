@@ -252,17 +252,17 @@ When responding:
 
             logger.debug(
                 "Intent: %s (confidence: %.2f)",
-                classification['intent'],
-                classification['confidence']
+                classification["intent"],
+                classification["confidence"],
             )
 
             response_text: str
 
             # Check if intent confidence is high enough for direct skill dispatch
             # (bypassing full LLM function calling for obvious commands)
-            if classification['confidence'] >= 0.8:
-                intent = classification['intent']
-                if intent != 'general_conversation':
+            if classification["confidence"] >= 0.8:
+                intent = classification["intent"]
+                if intent != "general_conversation":
                     # Direct skill dispatch for high-confidence matches
                     skill = self.skill_registry.get_skill(intent)
                     if skill:
@@ -272,8 +272,8 @@ When responding:
                         # Create skill context with classified parameters
                         context = SkillContext(
                             user_input=user_input,
-                            intent=classification['intent'],
-                            parameters=classification['parameters'],
+                            intent=classification["intent"],
+                            parameters=classification["parameters"],
                             memory=self.memory,
                             config=self.config,
                             conversation_history=self.conversation_history.copy(),
@@ -281,7 +281,7 @@ When responding:
                         )
 
                         # Inject privacy gateway if needed
-                        if hasattr(skill, 'privacy_gateway') and skill.privacy_gateway is None:
+                        if hasattr(skill, "privacy_gateway") and skill.privacy_gateway is None:
                             skill.privacy_gateway = self.privacy
 
                         # Execute the skill
@@ -323,7 +323,7 @@ When responding:
                 )
 
                 # Extract the response content
-                if hasattr(response, 'content'):
+                if hasattr(response, "content"):
                     response_text = response.content
                 elif isinstance(response, str):
                     response_text = response
@@ -454,7 +454,7 @@ When responding:
             if pattern in text.lower():
                 # Extract the relevant part
                 idx = text.lower().find(pattern)
-                fact = text[idx + len(pattern):].strip()
+                fact = text[idx + len(pattern) :].strip()
 
                 # Clean up the fact
                 fact = fact.rstrip(".!?").strip()

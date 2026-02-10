@@ -5,12 +5,9 @@ Tests AppleScript injection, subprocess safety, path traversal, and API key safe
 
 from __future__ import annotations
 
-import subprocess
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 
-from roxy.macos.applescript import escape_applescript_string, AppleScriptRunner
+from roxy.macos.applescript import escape_applescript_string
 
 
 class TestAppleScriptInjection:
@@ -22,28 +19,28 @@ class TestAppleScriptInjection:
 
     def test_escape_backslashes(self):
         """Test backslashes are properly escaped."""
-        assert escape_applescript_string('path\\to\\file') == 'path\\\\to\\\\file'
+        assert escape_applescript_string("path\\to\\file") == "path\\\\to\\\\file"
 
     def test_escape_newlines(self):
         """Test newlines are properly escaped."""
-        result = escape_applescript_string('line1\nline2')
+        result = escape_applescript_string("line1\nline2")
         # Should escape the newline
-        assert '\\n' in result
-        assert '\n' not in result
+        assert "\\n" in result
+        assert "\n" not in result
 
     def test_escape_carriage_returns(self):
         """Test carriage returns are properly escaped."""
-        result = escape_applescript_string('line1\rline2')
+        result = escape_applescript_string("line1\rline2")
         # Should escape the carriage return
-        assert '\\r' in result
-        assert '\r' not in result
+        assert "\\r" in result
+        assert "\r" not in result
 
     def test_escape_tabs(self):
         """Test tabs are properly escaped."""
-        result = escape_applescript_string('col1\tcol2')
+        result = escape_applescript_string("col1\tcol2")
         # Should escape the tab
-        assert '\\t' in result
-        assert '\t' not in result
+        assert "\\t" in result
+        assert "\t" not in result
 
     def test_escape_single_quotes(self):
         """Test single quotes are escaped."""
@@ -100,7 +97,7 @@ class TestAppleScriptInjection:
 
         # The dangerous characters should be escaped
         assert '"' in escaped  # Quotes should be escaped
-        assert '\\' in escaped  # Backslash should be escaped
+        assert "\\" in escaped  # Backslash should be escaped
 
         # The escaped input prevents injection when used in AppleScript string context
         # When embedded like: tell application "{escaped}", the escaped quotes
@@ -110,7 +107,7 @@ class TestAppleScriptInjection:
         # Verify the dangerous characters are at least escaped
         # The key security property is that when this is placed inside
         # an AppleScript string literal, the escaped quotes won't terminate the string
-        assert escaped.count('\"') == 2  # Original had 2 quotes, both get escaped
+        assert escaped.count('"') == 2  # Original had 2 quotes, both get escaped
 
 
 class TestSubprocessSafety:
@@ -145,7 +142,6 @@ class TestSubprocessSafety:
         # subprocess.run(f"open {app_name}", shell=True)
 
         # We verify the actual code doesn't have the unsafe pattern
-        import subprocess
 
         # Verify list arguments are used
         cmd = ["open", "-a", "Safari"]
@@ -247,7 +243,6 @@ class TestAPIKeySafety:
 
     def test_env_file_in_gitignore(self):
         """Verify .env is in .gitignore."""
-        import os
         from pathlib import Path
 
         gitignore_path = Path(__file__).parent.parent.parent.parent / ".gitignore"
@@ -259,24 +254,27 @@ class TestAPIKeySafety:
 class TestInjectionPatterns:
     """Test specific injection patterns."""
 
-    @pytest.mark.parametrize("dangerous_input,expected_safe", [
-        # Command injection attempts
-        ('Safari"; rm -rf /', True),
-        ('app && malicious', True),
-        ('app | malicious', True),
-        ('app `malicious`', True),
-        ('app $(malicious)', True),
-        # Path traversal attempts
-        ('../../../../etc/passwd', True),
-        ('/etc/passwd', True),
-        ('~/.ssh/config', True),  # SSH keys
-        # SQL injection patterns (for potential future DB use)
-        ("'; DROP TABLE users; --", True),
-        ("1' OR '1'='1", True),
-        # Script injection
-        ('<script>alert("XSS")</script>', True),
-        ('javascript:alert("XSS")', True),
-    ])
+    @pytest.mark.parametrize(
+        "dangerous_input,expected_safe",
+        [
+            # Command injection attempts
+            ('Safari"; rm -rf /', True),
+            ("app && malicious", True),
+            ("app | malicious", True),
+            ("app `malicious`", True),
+            ("app $(malicious)", True),
+            # Path traversal attempts
+            ("../../../../etc/passwd", True),
+            ("/etc/passwd", True),
+            ("~/.ssh/config", True),  # SSH keys
+            # SQL injection patterns (for potential future DB use)
+            ("'; DROP TABLE users; --", True),
+            ("1' OR '1'='1", True),
+            # Script injection
+            ('<script>alert("XSS")</script>', True),
+            ('javascript:alert("XSS")', True),
+        ],
+    )
     def test_dangerous_inputs_are_escaped(self, dangerous_input, expected_safe):
         """Test that dangerous inputs are properly escaped."""
         escaped = escape_applescript_string(dangerous_input)
@@ -291,7 +289,6 @@ class TestFileOpenSafety:
 
     def test_file_search_uses_spotlight(self):
         """Test that file search uses Spotlight (validated paths)."""
-        from roxy.macos.spotlight import SpotlightSearch
 
         # Spotlight should return safe, validated paths
         # The implementation should use mdfind which is safer than raw file access

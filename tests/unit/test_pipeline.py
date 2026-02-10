@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from roxy.voice.pipeline import VoicePipeline, PipelineStatus
+from roxy.voice.pipeline import PipelineStatus, VoicePipeline
 
 
 class TestPipelineStatus:
@@ -55,7 +55,9 @@ class TestVoicePipeline:
             config=mock_config,
         )
 
-        with patch.object(pipeline._wake_word, "start_listening", new_callable=AsyncMock) as mock_start:
+        with patch.object(
+            pipeline._wake_word, "start_listening", new_callable=AsyncMock
+        ) as mock_start:
             await pipeline.start()
 
             assert pipeline.is_running
@@ -73,7 +75,9 @@ class TestVoicePipeline:
         )
         pipeline._running = True
 
-        with patch.object(pipeline._wake_word, "start_listening", new_callable=AsyncMock) as mock_start:
+        with patch.object(
+            pipeline._wake_word, "start_listening", new_callable=AsyncMock
+        ) as mock_start:
             await pipeline.start()
 
             # Should not call start_listening again
@@ -91,7 +95,9 @@ class TestVoicePipeline:
         )
         pipeline._running = True
 
-        with patch.object(pipeline._wake_word, "stop_listening", new_callable=AsyncMock) as mock_stop:
+        with patch.object(
+            pipeline._wake_word, "stop_listening", new_callable=AsyncMock
+        ) as mock_stop:
             with patch.object(pipeline._stt, "cleanup", new_callable=AsyncMock):
                 with patch.object(pipeline._tts, "cleanup", new_callable=AsyncMock):
                     await pipeline.stop()
@@ -229,7 +235,9 @@ class TestVoicePipeline:
         async def mock_process():
             await asyncio.sleep(0.1)
 
-        with patch.object(pipeline, "_process_interaction", new_callable=AsyncMock, side_effect=mock_process):
+        with patch.object(
+            pipeline, "_process_interaction", new_callable=AsyncMock, side_effect=mock_process
+        ):
             # Start first processing
             task1 = asyncio.create_task(pipeline._on_wake_word_detected())
             await asyncio.sleep(0.01)

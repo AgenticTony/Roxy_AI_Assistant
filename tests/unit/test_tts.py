@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
-import numpy as np
 import pytest
 
-from roxy.voice.tts import TextToSpeech, DEFAULT_VOICE, AVAILABLE_VOICES
+from roxy.voice.tts import AVAILABLE_VOICES, DEFAULT_VOICE, TextToSpeech
 
 
 class TestTextToSpeech:
@@ -53,7 +51,7 @@ class TestTextToSpeech:
 
     def test_map_voice_to_macos(self) -> None:
         """Test mapping Kokoro voices to macOS voices."""
-        tts = TextToText()
+        tts = TextToSpeech()
 
         # Test various mappings
         assert tts._map_voice_to_macos("af_heart") == "Samantha"

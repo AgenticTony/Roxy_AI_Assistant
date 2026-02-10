@@ -230,7 +230,9 @@ class GitOpsSkill(RoxySkill):
 
         return result.success
 
-    def git_push(self, remote: str = "origin", branch: str | None = None, path: str | None = None) -> bool:
+    def git_push(
+        self, remote: str = "origin", branch: str | None = None, path: str | None = None
+    ) -> bool:
         """Push commits to remote.
 
         Args:
@@ -250,7 +252,9 @@ class GitOpsSkill(RoxySkill):
 
         return result.success
 
-    def git_pull(self, remote: str = "origin", branch: str | None = None, path: str | None = None) -> bool:
+    def git_pull(
+        self, remote: str = "origin", branch: str | None = None, path: str | None = None
+    ) -> bool:
         """Pull changes from remote.
 
         Args:
@@ -322,14 +326,16 @@ Generate the commit message:"""
                 )
 
                 # Extract the commit message from response
-                commit_message = response.content.strip().strip('"\'').split('\n')[0]
+                commit_message = response.content.strip().strip("\"'").split("\n")[0]
 
                 # Validate that we got a reasonable commit message
                 if commit_message and len(commit_message) > 5 and len(commit_message) < 150:
                     logger.info(f"Generated commit message using LLM: {commit_message}")
                     return commit_message
                 else:
-                    logger.warning(f"LLM returned invalid commit message, falling back to simple message")
+                    logger.warning(
+                        "LLM returned invalid commit message, falling back to simple message"
+                    )
 
             except Exception as e:
                 logger.error(f"Error generating commit message with LLM: {e}")
@@ -337,7 +343,9 @@ Generate the commit message:"""
 
         # Fallback to simple message generation
         lines = diff_result.output.split("\n")
-        changed_files = [line for line in lines if line.startswith("+++ ") or line.startswith("--- ")]
+        changed_files = [
+            line for line in lines if line.startswith("+++ ") or line.startswith("--- ")
+        ]
 
         if changed_files:
             return f"Update {len(changed_files)} file{'s' if len(changed_files) > 1 else ''}"
@@ -447,7 +455,9 @@ Generate the commit message:"""
                         follow_up="Please provide a branch name.",
                     )
 
-                result = self._run_git(["checkout", "-b", branch_name], Path(path) if path else None)
+                result = self._run_git(
+                    ["checkout", "-b", branch_name], Path(path) if path else None
+                )
 
                 if result.success:
                     return SkillResult(

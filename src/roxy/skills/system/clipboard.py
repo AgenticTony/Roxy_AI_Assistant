@@ -193,11 +193,11 @@ class ClipboardSkill(RoxySkill):
                 )
 
             # Simulate paste using Cmd+V via AppleScript
-            script = '''
+            script = """
             tell application "System Events"
                 keystroke "v" using command down
             end tell
-            '''
+            """
 
             await runner.run(script)
 
@@ -288,11 +288,13 @@ class ClipboardSkill(RoxySkill):
         """
         import time
 
-        self._history.append({
-            "content": content,
-            "timestamp": time.time(),
-            "length": len(content),
-        })
+        self._history.append(
+            {
+                "content": content,
+                "timestamp": time.time(),
+                "length": len(content),
+            }
+        )
 
         # Trim history if needed
         if len(self._history) > self._max_history:

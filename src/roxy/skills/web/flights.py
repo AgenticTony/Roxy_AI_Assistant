@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -128,7 +128,9 @@ class FlightSearchSkill(RoxySkill):
 
         # Extract destination
         # Look for "to [city]" or "flights to [city]"
-        to_pattern = r"(?:to|flights? to|fly to) ([A-Za-z\s]+?)(?:\s+(?:on|from|for|departing|$|\d))"
+        to_pattern = (
+            r"(?:to|flights? to|fly to) ([A-Za-z\s]+?)(?:\s+(?:on|from|for|departing|$|\d))"
+        )
         to_match = re.search(to_pattern, query, re.IGNORECASE)
 
         if to_match:
@@ -230,11 +232,11 @@ class FlightSearchSkill(RoxySkill):
             url = self._build_google_flights_url(params)
 
             task = f"""Go to {url} and search for flights with these parameters:
-- Origin: {params['origin']}
-- Destination: {params.get('destination', 'Any')}
-- Departure date: {params.get('departure_date', 'Next available')}
-- Passengers: {params['passengers']}
-- Class: {params['class']}
+- Origin: {params["origin"]}
+- Destination: {params.get("destination", "Any")}
+- Departure date: {params.get("departure_date", "Next available")}
+- Passengers: {params["passengers"]}
+- Class: {params["class"]}
 
 Extract the top 5 flight options sorted by price. For each option, provide:
 1. Airline name
@@ -267,7 +269,7 @@ Format the results as a JSON array of objects with these keys: airline, departur
         except ImportError:
             logger.warning("browser-use not available")
             return []
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Flight search timed out")
             return []
         except Exception as e:
@@ -291,23 +293,25 @@ Format the results as a JSON array of objects with these keys: airline, departur
             import json
 
             # Extract JSON from the text
-            json_pattern = r'\[[\s\S]*\]'
+            json_pattern = r"\[[\s\S]*\]"
             json_match = re.search(json_pattern, results_text)
 
             if json_match:
                 data = json.loads(json_match.group())
 
                 for item in data[:5]:  # Top 5 only
-                    options.append(FlightOption(
-                        airline=item.get("airline", "Unknown"),
-                        departure_time=item.get("departure_time", ""),
-                        arrival_time=item.get("arrival_time", ""),
-                        duration=item.get("duration", ""),
-                        stops=item.get("stops", "Unknown"),
-                        price=item.get("price", "Price unavailable"),
-                        origin=params["origin"],
-                        destination=params.get("destination", "Unknown"),
-                    ))
+                    options.append(
+                        FlightOption(
+                            airline=item.get("airline", "Unknown"),
+                            departure_time=item.get("departure_time", ""),
+                            arrival_time=item.get("arrival_time", ""),
+                            duration=item.get("duration", ""),
+                            stops=item.get("stops", "Unknown"),
+                            price=item.get("price", "Price unavailable"),
+                            origin=params["origin"],
+                            destination=params.get("destination", "Unknown"),
+                        )
+                    )
 
         except (json.JSONDecodeError, Exception) as e:
             logger.warning(f"Failed to parse flight results as JSON: {e}")
@@ -319,7 +323,7 @@ Format the results as a JSON array of objects with these keys: airline, departur
         def extract_price(price: str) -> float:
             try:
                 # Extract numbers from price string
-                numbers = re.findall(r'\d+\.?\d*', price.replace(",", ""))
+                numbers = re.findall(r"\d+\.?\d*", price.replace(",", ""))
                 return float(numbers[0]) if numbers else float("inf")
             except (ValueError, IndexError):
                 return float("inf")
@@ -342,7 +346,7 @@ Format the results as a JSON array of objects with these keys: airline, departur
 
         # Look for patterns like:
         # "1. Airline - $XXX - Dep: XX:XX - Arr: XX:XX"
-        pattern = r'(?:\d+\.|\*)\s*([A-Za-z\s]+?)\s*[-–]\s*\$?(\d+(?:\.\d+)?)\s*[-–]\s*Dep:\s*(\d{1,2}:\d{2}\s*[AP]M?)\s*[-–]\s*Arr:\s*(\d{1,2}:\d{2}\s*[AP]M?)'
+        pattern = r"(?:\d+\.|\*)\s*([A-Za-z\s]+?)\s*[-–]\s*\$?(\d+(?:\.\d+)?)\s*[-–]\s*Dep:\s*(\d{1,2}:\d{2}\s*[AP]M?)\s*[-–]\s*Arr:\s*(\d{1,2}:\d{2}\s*[AP]M?)"
 
         matches = re.finditer(pattern, text, re.IGNORECASE)
 
@@ -352,16 +356,18 @@ Format the results as a JSON array of objects with these keys: airline, departur
             departure = match.group(3)
             arrival = match.group(4)
 
-            options.append(FlightOption(
-                airline=airline,
-                departure_time=departure,
-                arrival_time=arrival,
-                duration="Unknown",
-                stops="Unknown",
-                price=price,
-                origin=params["origin"],
-                destination=params.get("destination", "Unknown"),
-            ))
+            options.append(
+                FlightOption(
+                    airline=airline,
+                    departure_time=departure,
+                    arrival_time=arrival,
+                    duration="Unknown",
+                    stops="Unknown",
+                    price=price,
+                    origin=params["origin"],
+                    destination=params.get("destination", "Unknown"),
+                )
+            )
 
         return options
 
@@ -390,7 +396,9 @@ Format the results as a JSON array of objects with these keys: airline, departur
             )
 
         # Check cache
-        cache_key = f"{params['origin']}-{params.get('destination', '')}-{params.get('departure_date', '')}"
+        cache_key = (
+            f"{params['origin']}-{params.get('destination', '')}-{params.get('departure_date', '')}"
+        )
         if cache_key in self._cache:
             cached = self._cache[cache_key]
             if not cached.is_expired():
@@ -401,7 +409,7 @@ Format the results as a JSON array of objects with these keys: airline, departur
         if self.privacy_gateway:
             redaction_result = self.privacy_gateway.redact(user_input)
             if redaction_result.was_redacted:
-                logger.info(f"Redacted PII from flight search query")
+                logger.info("Redacted PII from flight search query")
 
         # Perform search
         try:

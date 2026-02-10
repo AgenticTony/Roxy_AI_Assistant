@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from roxy.brain.llm_clients import CloudLLMClient, LLMResponse, OllamaClient
+from roxy.brain.privacy import PrivacyGateway
 from roxy.brain.router import ConfidenceRouter
-from roxy.brain.llm_clients import LLMResponse, OllamaClient, CloudLLMClient
-from roxy.brain.privacy import PrivacyGateway, ConsentMode
 
 
 class TestConfidenceRouter:
@@ -63,11 +63,13 @@ class TestConfidenceRouter:
             return True, None
 
         privacy.can_use_cloud = AsyncMock(side_effect=mock_can_use_cloud)
-        privacy.redact = MagicMock(return_value=MagicMock(
-            redacted_text="Redacted text",
-            pii_matches=[],
-            was_redacted=False,
-        ))
+        privacy.redact = MagicMock(
+            return_value=MagicMock(
+                redacted_text="Redacted text",
+                pii_matches=[],
+                was_redacted=False,
+            )
+        )
         privacy.restore = MagicMock(return_value="Cloud response")
 
         return privacy
@@ -169,7 +171,9 @@ class TestConfidenceRouter:
         assert router._blocked_requests == 1
 
     @pytest.mark.asyncio
-    async def test_assess_confidence(self, mock_local_client, mock_cloud_client, mock_privacy) -> None:
+    async def test_assess_confidence(
+        self, mock_local_client, mock_cloud_client, mock_privacy
+    ) -> None:
         """Test confidence assessment."""
         router = ConfidenceRouter(
             local_client=mock_local_client,

@@ -103,7 +103,7 @@ async def roxy_system_status() -> dict:
         "status": "running",
         "components": {
             "memory": "pending",  # Will be updated by memory-builder
-            "voice": "pending",   # Will be updated by voice-engineer
+            "voice": "pending",  # Will be updated by voice-engineer
             "skills": "initializing",
             "mcp_servers": "starting",
         },

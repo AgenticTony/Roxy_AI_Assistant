@@ -6,7 +6,6 @@ All queries are passed through PrivacyGateway for PII redaction.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import subprocess
 from dataclasses import dataclass
@@ -98,8 +97,7 @@ class WebSearchSkill(RoxySkill):
 
         # Remove timestamps outside the rate limit window
         self._request_times = [
-            ts for ts in self._request_times
-            if now - ts < self.RATE_LIMIT_WINDOW
+            ts for ts in self._request_times if now - ts < self.RATE_LIMIT_WINDOW
         ]
 
         if len(self._request_times) >= self.RATE_LIMIT_MAX:
@@ -117,7 +115,15 @@ class WebSearchSkill(RoxySkill):
         """
         try:
             result = subprocess.run(
-                ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:8888/health"],
+                [
+                    "curl",
+                    "-s",
+                    "-o",
+                    "/dev/null",
+                    "-w",
+                    "%{http_code}",
+                    "http://localhost:8888/health",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -277,7 +283,7 @@ class WebSearchSkill(RoxySkill):
                 # Remove common leading words
                 for word in ["for", "up", "the", "on"]:
                     if query.startswith(word + " "):
-                        query = query[len(word + " "):].strip()
+                        query = query[len(word + " ") :].strip()
                 break
 
         if not query:

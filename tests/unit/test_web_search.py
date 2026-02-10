@@ -6,9 +6,10 @@ No external API calls are made.
 
 from __future__ import annotations
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from roxy.brain.privacy import PrivacyGateway
 from roxy.skills.base import Permission, SkillContext, StubMemoryManager
@@ -96,7 +97,9 @@ class TestWebSearchSkill:
         # Mock the search methods
         web_search_skill._search_brave = AsyncMock(return_value="Found pizza places")
         web_search_skill.privacy_gateway = MagicMock()
-        web_search_skill.privacy_gateway.redact = MagicMock(return_value=MagicMock(was_redacted=False, redacted_text="the best pizza places"))
+        web_search_skill.privacy_gateway.redact = MagicMock(
+            return_value=MagicMock(was_redacted=False, redacted_text="the best pizza places")
+        )
 
         result = await web_search_skill.execute(skill_context)
 
@@ -104,7 +107,9 @@ class TestWebSearchSkill:
         assert "pizza" in result.response_text.lower() or "Found" in result.response_text
 
     @pytest.mark.asyncio
-    async def test_pii_redaction_before_search(self, web_search_skill, skill_context, privacy_gateway):
+    async def test_pii_redaction_before_search(
+        self, web_search_skill, skill_context, privacy_gateway
+    ):
         """Test that PII is redacted before external searches."""
         # Input with email
         skill_context.user_input = "search for my emails at anthony@example.com"
@@ -112,8 +117,7 @@ class TestWebSearchSkill:
         # Mock privacy gateway
         privacy_gateway.redact = MagicMock(
             return_value=MagicMock(
-                was_redacted=True,
-                redacted_text="search for my emails at [REDACTED_EMAIL_1]"
+                was_redacted=True, redacted_text="search for my emails at [REDACTED_EMAIL_1]"
             )
         )
         web_search_skill.privacy_gateway = privacy_gateway

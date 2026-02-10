@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
+from roxy.macos.applescript import (
+    escape_applescript_string,
+    get_applescript_runner,
+    get_joinlist_handler,
+)
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.macos.applescript import escape_applescript_string, get_applescript_runner, get_joinlist_handler
 
 logger = logging.getLogger(__name__)
 
@@ -147,12 +150,14 @@ class CalendarSkill(RoxySkill):
             for event_str in output.split("|||"):
                 parts = event_str.split(", ")
                 if len(parts) >= 3:
-                    events.append({
-                        "summary": parts[0].strip(),
-                        "start": parts[1].strip(),
-                        "end": parts[2].strip(),
-                        "location": parts[3].strip() if len(parts) > 3 else "",
-                    })
+                    events.append(
+                        {
+                            "summary": parts[0].strip(),
+                            "start": parts[1].strip(),
+                            "end": parts[2].strip(),
+                            "location": parts[3].strip() if len(parts) > 3 else "",
+                        }
+                    )
 
             return events
 
@@ -184,7 +189,7 @@ class CalendarSkill(RoxySkill):
             # Default to 1 hour duration - start_date is expected to be
             # an AppleScript date expression (e.g., "Monday at 2pm", current date)
             # so we use it directly without escaping
-            end_date = f'{start_date} + 1 * hours'
+            end_date = f"{start_date} + 1 * hours"
 
         # Escape all user input to prevent AppleScript injection
         title_safe = escape_applescript_string(title)
@@ -270,7 +275,7 @@ class CalendarSkill(RoxySkill):
         for i, event in enumerate(events, 1):
             lines.append(f"{i}. {event['summary']}")
             lines.append(f"   Time: {event['start']}")
-            if event['location']:
+            if event["location"]:
                 lines.append(f"   Location: {event['location']}")
             lines.append("")
 

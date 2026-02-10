@@ -6,13 +6,14 @@ dispatched to via the skill registry.
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
+
+import pytest
 
 from roxy.config import RoxyConfig
+from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
 from roxy.skills.registry import SkillRegistry
-from roxy.skills.base import RoxySkill, SkillContext, SkillResult, Permission
 
 
 class TestSkill1(RoxySkill):

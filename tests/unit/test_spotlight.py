@@ -41,18 +41,16 @@ class TestSpotlightSearch:
         """Test searching files."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(
-            b"/path/to/file1.txt\n/path/to/file2.pdf\n",
-            b""
-        ))
+        mock_process.communicate = AsyncMock(
+            return_value=(b"/path/to/file1.txt\n/path/to/file2.pdf\n", b"")
+        )
 
         # Mock mdls for metadata
         mdls_process = AsyncMock()
         mdls_process.returncode = 0
-        mdls_process.communicate = AsyncMock(return_value=(
-            b'kMDItemDisplayName = "file1.txt"\nkMDItemKind = "Plain Text"\n',
-            b""
-        ))
+        mdls_process.communicate = AsyncMock(
+            return_value=(b'kMDItemDisplayName = "file1.txt"\nkMDItemKind = "Plain Text"\n', b"")
+        )
 
         mock_subprocess.side_effect = [mock_process, mdls_process, mdls_process]
 
@@ -81,10 +79,7 @@ class TestSpotlightSearch:
         """Test searching by file kind."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(
-            b"/path/to/file.pdf\n",
-            b""
-        ))
+        mock_process.communicate = AsyncMock(return_value=(b"/path/to/file.pdf\n", b""))
 
         mock_subprocess.return_value = mock_process
 
@@ -92,12 +87,16 @@ class TestSpotlightSearch:
         search._available = True
 
         # Mock get_file_metadata to avoid mdls call
-        with patch.object(search, "get_file_metadata", return_value={
-            "path": "/path/to/file.pdf",
-            "name": "file.pdf",
-            "kind": "PDF",
-            "size": 0,
-        }):
+        with patch.object(
+            search,
+            "get_file_metadata",
+            return_value={
+                "path": "/path/to/file.pdf",
+                "name": "file.pdf",
+                "kind": "PDF",
+                "size": 0,
+            },
+        ):
             results = await search.search_by_kind("test", "pdf")
 
             assert len(results) == 1
@@ -108,22 +107,23 @@ class TestSpotlightSearch:
         """Test searching recent files."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(
-            b"/path/to/recent.txt\n",
-            b""
-        ))
+        mock_process.communicate = AsyncMock(return_value=(b"/path/to/recent.txt\n", b""))
 
         mock_subprocess.return_value = mock_process
 
         search = SpotlightSearch()
         search._available = True
 
-        with patch.object(search, "get_file_metadata", return_value={
-            "path": "/path/to/recent.txt",
-            "name": "recent.txt",
-            "kind": "Plain Text",
-            "size": 0,
-        }):
+        with patch.object(
+            search,
+            "get_file_metadata",
+            return_value={
+                "path": "/path/to/recent.txt",
+                "name": "recent.txt",
+                "kind": "Plain Text",
+                "size": 0,
+            },
+        ):
             results = await search.search_recent("test", days=7)
 
             assert len(results) == 1
@@ -132,8 +132,8 @@ class TestSpotlightSearch:
     @patch("asyncio.create_subprocess_exec")
     async def test_get_file_metadata(self, mock_subprocess):
         """Test getting file metadata."""
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
 
         # Create a temp file to test with
         with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
@@ -143,10 +143,12 @@ class TestSpotlightSearch:
         try:
             mock_process = AsyncMock()
             mock_process.returncode = 0
-            mock_process.communicate = AsyncMock(return_value=(
-                b'kMDItemDisplayName = "test.txt"\nkMDItemKind = "Plain Text"\nkMDItemFSSize = 12\n',
-                b""
-            ))
+            mock_process.communicate = AsyncMock(
+                return_value=(
+                    b'kMDItemDisplayName = "test.txt"\nkMDItemKind = "Plain Text"\nkMDItemFSSize = 12\n',
+                    b"",
+                )
+            )
 
             mock_subprocess.return_value = mock_process
 
@@ -169,10 +171,7 @@ class TestSpotlightSearch:
         """Test finding files by name."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(
-            b"/path/to/testfile.txt\n",
-            b""
-        ))
+        mock_process.communicate = AsyncMock(return_value=(b"/path/to/testfile.txt\n", b""))
 
         mock_subprocess.return_value = mock_process
 
@@ -190,10 +189,7 @@ class TestSpotlightSearch:
         """Test finding applications."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(
-            b"/Applications/Safari.app\n",
-            b""
-        ))
+        mock_process.communicate = AsyncMock(return_value=(b"/Applications/Safari.app\n", b""))
 
         mock_subprocess.return_value = mock_process
 

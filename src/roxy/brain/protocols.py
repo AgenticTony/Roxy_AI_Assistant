@@ -6,8 +6,8 @@ enabling loose coupling and easier testing.
 
 from __future__ import annotations
 
-from typing import Any, Protocol
 from dataclasses import dataclass
+from typing import Any, Protocol
 
 from .llm_clients import LLMResponse
 
@@ -15,6 +15,7 @@ from .llm_clients import LLMResponse
 @dataclass
 class PrivacyRedactionResult:
     """Result of PII redaction from privacy gateway."""
+
     redacted_text: str
     pii_matches: list[Any]
     was_redacted: bool = False

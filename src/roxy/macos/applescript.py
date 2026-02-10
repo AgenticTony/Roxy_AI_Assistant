@@ -35,7 +35,7 @@ def get_joinlist_handler() -> str:
         ... {get_joinlist_handler()}
         ... '''
     """
-    return '''
+    return """
         on joinList(lst, delimiter)
             set out to ""
             repeat with itemNum from 1 to count of lst
@@ -44,7 +44,7 @@ def get_joinlist_handler() -> str:
             end repeat
             return out
         end joinList
-    '''
+    """
 
 
 def escape_applescript_string(s: str) -> str:
@@ -82,7 +82,7 @@ def escape_applescript_string(s: str) -> str:
         s = str(s)
 
     # Strip null bytes (security risk)
-    s = s.replace('\x00', '')
+    s = s.replace("\x00", "")
 
     # Replace backslash first (to avoid double-escaping)
     s = s.replace("\\", "\\\\")
@@ -94,25 +94,26 @@ def escape_applescript_string(s: str) -> str:
     s = s.replace("'", "\\'")
 
     # Handle line breaks
-    s = s.replace('\n', '\\n')
-    s = s.replace('\r', '\\r')
+    s = s.replace("\n", "\\n")
+    s = s.replace("\r", "\\r")
 
     # Handle tabs
-    s = s.replace('\t', '\\t')
+    s = s.replace("\t", "\\t")
 
     # Handle other potentially dangerous characters in string context
     # Percent sign can be used for variable interpolation
-    s = s.replace('%', '\\%')
+    s = s.replace("%", "\\%")
 
     # Dollar sign (variable interpolation)
-    s = s.replace('$', '\\$')
+    s = s.replace("$", "\\$")
 
     # Backtick (command substitution in shell)
-    s = s.replace('`', '\\`')
+    s = s.replace("`", "\\`")
 
     # Remove any remaining control characters except common whitespace
     import re
-    s = re.sub(r'[\x01-\x08\x0b-\x0c\x0e-\x1f]', '', s)
+
+    s = re.sub(r"[\x01-\x08\x0b-\x0c\x0e-\x1f]", "", s)
 
     return s
 
@@ -270,7 +271,7 @@ class AppleScriptRunner:
         Returns:
             List of dicts with app name, bundle ID, and if it's frontmost.
         """
-        script = '''
+        script = """
         tell application "System Events"
             set runningApps to (name of every process whose background only is false) as list
             set appList to {}
@@ -284,11 +285,11 @@ class AppleScriptRunner:
             end repeat
             return appList as string
         end tell
-        '''
+        """
         output = await self.run(script)
         # Parse output - AppleScript returns complex structure
         # For simplicity, return basic list from JXA instead
-        jxa_script = '''
+        jxa_script = """
         var apps = Application("System Events").processes whose({
             backgroundOnly: false
         });
@@ -304,16 +305,18 @@ class AppleScriptRunner:
             } catch (e) {}
         }
         JSON.stringify(appList);
-        '''
+        """
         result = json.loads(await self.run_jxa(jxa_script))
         # Convert camelCase keys to snake_case
         converted = []
         for app in result:
-            converted.append({
-                "name": app.get("name"),
-                "bundle_id": app.get("bundleID"),
-                "frontmost": app.get("frontmost")
-            })
+            converted.append(
+                {
+                    "name": app.get("name"),
+                    "bundle_id": app.get("bundleID"),
+                    "frontmost": app.get("frontmost"),
+                }
+            )
         return converted
 
     async def get_frontmost_app(self) -> dict[str, Any]:
@@ -323,7 +326,7 @@ class AppleScriptRunner:
         Returns:
             Dict with app name, bundle ID, and window title if available.
         """
-        script = '''
+        script = """
         tell application "System Events"
             set frontApp to (name of first application process whose frontmost is true)
             try
@@ -333,7 +336,7 @@ class AppleScriptRunner:
             end try
             return frontApp & "||" & frontAppID
         end tell
-        '''
+        """
         output = await self.run(script)
         parts = output.split("||")
         return {"name": parts[0], "bundle_id": parts[1] if len(parts) > 1 else "unknown"}
@@ -390,7 +393,7 @@ class AppleScriptRunner:
         Returns:
             Clipboard text content.
         """
-        script = '''
+        script = """
         tell application "System Events"
             try
                 set theClipboard to the clipboard
@@ -399,7 +402,7 @@ class AppleScriptRunner:
                 return ""
             end try
         end tell
-        '''
+        """
         return await self.run(script)
 
     async def set_clipboard(self, text: str) -> bool:
@@ -437,7 +440,7 @@ class AppleScriptRunner:
         Returns:
             List of dicts with window index, tab index, title, and URL.
         """
-        script = '''
+        script = """
         tell application "Safari"
             if not running then
                 return "[]"
@@ -465,9 +468,9 @@ class AppleScriptRunner:
             -- This is a simplified implementation
             return theList as string
         end deepCopy
-        '''
+        """
         # Use JXA for cleaner JSON handling
-        jxa_script = '''
+        jxa_script = """
         var Safari = Application("Safari");
         if (!Safari.running()) {
             throw new Error("Safari is not running");
@@ -492,7 +495,7 @@ class AppleScriptRunner:
         }
 
         JSON.stringify(result);
-        '''
+        """
         try:
             return json.loads(await self.run_jxa(jxa_script))
         except Exception:
@@ -505,7 +508,7 @@ class AppleScriptRunner:
         Returns:
             Number of unread messages.
         """
-        script = '''
+        script = """
         tell application "Mail"
             if not running then
                 return "0"
@@ -513,7 +516,7 @@ class AppleScriptRunner:
             set unreadCount to (count of messages in inbox whose read status is false)
             return unreadCount as string
         end tell
-        '''
+        """
         try:
             result = await self.run(script)
             return int(result)
@@ -530,7 +533,7 @@ class AppleScriptRunner:
         Returns:
             List of email subjects.
         """
-        script = f'''
+        script = f"""
         tell application "Mail"
             if not running then
                 return "[]"
@@ -575,7 +578,7 @@ class AppleScriptRunner:
             end repeat
             return newText
         end escapeJson
-        '''
+        """
         try:
             return json.loads(await self.run(script))
         except Exception:
@@ -631,11 +634,11 @@ class AppleScriptRunner:
         end escapeJson
         '''
         # Use JXA for better date handling
-        jxa_script = f'''
+        jxa_script = """
         var Calendar = Application("Calendar");
-        if (!Calendar.running()) {{
+        if (!Calendar.running()) {
             throw new Error("Calendar is not running");
-        }}
+        }
 
         var today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -645,26 +648,26 @@ class AppleScriptRunner:
         var calendars = Calendar.calendars;
         var result = [];
 
-        for (var i = 0; i < calendars.length; i++) {{
+        for (var i = 0; i < calendars.length; i++) {
             var events = calendars[i].events();
-            for (var j = 0; j < events.length; j++) {{
+            for (var j = 0; j < events.length; j++) {
                 var evt = events[j];
                 var startDate = evt.startDate();
                 var endDate = evt.endDate();
 
-                if (startDate >= today && startDate < tomorrow) {{
-                    result.push({{
+                if (startDate >= today && startDate < tomorrow) {
+                    result.push({
                         summary: evt.summary(),
                         startDate: startDate.toString(),
                         endDate: endDate.toString(),
                         location: evt.location()
-                    }});
-                }}
-            }}
-        }}
+                    });
+                }
+            }
+        }
 
         JSON.stringify(result);
-        '''
+        """
         try:
             return json.loads(await self.run_jxa(jxa_script))
         except Exception as e:
@@ -678,7 +681,7 @@ class AppleScriptRunner:
         Returns:
             List of dicts with note name, body preview, and modification date.
         """
-        jxa_script = '''
+        jxa_script = """
         var Notes = Application("Notes");
         if (!Notes.running()) {
             throw new Error("Notes is not running");
@@ -704,7 +707,7 @@ class AppleScriptRunner:
         }
 
         JSON.stringify(result);
-        '''
+        """
         try:
             return json.loads(await self.run_jxa(jxa_script))
         except Exception as e:

@@ -5,14 +5,13 @@ Tests MCP server lifecycle management and tool calling.
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from pathlib import Path
 
 from roxy.mcp.servers import (
     MCPServerManager,
     ServerConfig,
-    ServerConnection,
     ServerStatus,
     ServerTransport,
     ToolCallResult,
@@ -141,7 +140,7 @@ class TestMCPServerManager:
         # Modify config to disable server
         import yaml
 
-        with open(temp_config_file, "r") as f:
+        with open(temp_config_file) as f:
             config_data = yaml.safe_load(f)
 
         config_data["servers"]["test_server"]["enabled"] = False

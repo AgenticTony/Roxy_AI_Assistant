@@ -343,14 +343,16 @@ class ConversationHistory:
 
         results = []
         for row in cursor.fetchall():
-            results.append({
-                "id": row["id"],
-                "conversation_id": row["conversation_id"],
-                "role": row["role"],
-                "content": row["content"],
-                "timestamp": row["timestamp"],
-                "similarity": 1.0 - row["distance"],  # Convert distance to similarity
-            })
+            results.append(
+                {
+                    "id": row["id"],
+                    "conversation_id": row["conversation_id"],
+                    "role": row["role"],
+                    "content": row["content"],
+                    "timestamp": row["timestamp"],
+                    "similarity": 1.0 - row["distance"],  # Convert distance to similarity
+                }
+            )
 
         return results
 
@@ -400,14 +402,16 @@ class ConversationHistory:
 
         results = []
         for row in cursor.fetchall():
-            results.append({
-                "id": row["id"],
-                "conversation_id": row["conversation_id"],
-                "role": row["role"],
-                "content": row["content"],
-                "timestamp": row["timestamp"],
-                "similarity": 0.5,  # Default similarity for text search
-            })
+            results.append(
+                {
+                    "id": row["id"],
+                    "conversation_id": row["conversation_id"],
+                    "role": row["role"],
+                    "content": row["content"],
+                    "timestamp": row["timestamp"],
+                    "similarity": 0.5,  # Default similarity for text search
+                }
+            )
 
         return results
 
@@ -448,12 +452,14 @@ class ConversationHistory:
 
         messages = []
         for msg_row in cursor.fetchall():
-            messages.append({
-                "id": msg_row["id"],
-                "role": msg_row["role"],
-                "content": msg_row["content"],
-                "timestamp": msg_row["timestamp"],
-            })
+            messages.append(
+                {
+                    "id": msg_row["id"],
+                    "role": msg_row["role"],
+                    "content": msg_row["content"],
+                    "timestamp": msg_row["timestamp"],
+                }
+            )
 
         return {
             "id": conv_row["id"],
@@ -495,13 +501,15 @@ class ConversationHistory:
 
         results = []
         for row in cursor.fetchall():
-            results.append({
-                "id": row["id"],
-                "started_at": row["started_at"],
-                "ended_at": row["ended_at"],
-                "metadata": json.loads(row["metadata"]) if row["metadata"] else None,
-                "message_count": row["message_count"],
-            })
+            results.append(
+                {
+                    "id": row["id"],
+                    "started_at": row["started_at"],
+                    "ended_at": row["ended_at"],
+                    "metadata": json.loads(row["metadata"]) if row["metadata"] else None,
+                    "message_count": row["message_count"],
+                }
+            )
 
         return results
 

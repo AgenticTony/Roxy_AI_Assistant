@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from roxy.brain.privacy import (
-    PrivacyGateway,
-    PIIMatch,
-    RedactionResult,
     ConsentMode,
+    PIIMatch,
+    PrivacyGateway,
+    RedactionResult,
 )
 
 

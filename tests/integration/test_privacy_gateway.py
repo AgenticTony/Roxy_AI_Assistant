@@ -5,13 +5,14 @@ Tests PII detection, redaction, and cloud consent mechanisms.
 
 from __future__ import annotations
 
-import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
-from roxy.config import RoxyConfig, PrivacyConfig, ConsentMode
+import pytest
+
 from roxy.brain.privacy import PrivacyGateway
+from roxy.config import ConsentMode, PrivacyConfig
 
 
 @pytest.fixture
@@ -102,8 +103,9 @@ async def test_cloud_consent_always(privacy_config: PrivacyConfig) -> None:
     )
 
     # Should approve without asking
-    approved = await self._check_cloud_consent(gateway, "test request")
-    assert approved is True
+    allowed, message = await gateway.can_use_cloud()
+    assert allowed is True
+    assert message is None
 
 
 @pytest.mark.asyncio
@@ -116,8 +118,9 @@ async def test_cloud_consent_never(privacy_config: PrivacyConfig) -> None:
     )
 
     # Should deny without asking
-    approved = await self._check_cloud_consent(gateway, "test request")
-    assert approved is False
+    allowed, message = await gateway.can_use_cloud()
+    assert allowed is False
+    assert message is not None
 
 
 @pytest.mark.asyncio
@@ -130,13 +133,10 @@ async def test_cloud_consent_ask(privacy_config: PrivacyConfig) -> None:
     )
 
     # In 'ask' mode, consent should be requested
-    # For testing, we'll mock user approval
-    with patch("builtins.input", return_value="y"):
-        # In real implementation, this would prompt the user
-        # For tests, we assume approval
-        approved = await self._check_cloud_consent(gateway, "test request")
-        # Behavior depends on implementation
-        assert approved is not None
+    # The gateway returns True (allowed) with a message for the user
+    allowed, message = await gateway.can_use_cloud()
+    assert allowed is True  # Allowed, but requires user notification
+    assert message is not None  # Message should be shown to user
 
 
 @pytest.mark.asyncio
@@ -156,6 +156,7 @@ async def test_cloud_request_logging(privacy_config: PrivacyConfig) -> None:
 
     # Check log file was created/updated
     import os
+
     assert os.path.exists(log_path) or True  # May not exist in test env
 
 

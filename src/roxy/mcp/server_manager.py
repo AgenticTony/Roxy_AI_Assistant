@@ -6,22 +6,17 @@ This module now imports from split modules for better organization.
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import yaml
-from mcp import ClientSession
-from mcp.client.sse import sse_client
 
 # Import from split modules
 from .server_config import (
     ServerConfig,
     ServerConnection,
     ServerStatus,
-    ServerTransport,
     ToolCallResult,
 )
 from .server_health import ServerHealthChecker
@@ -101,6 +96,7 @@ class MCPServerManager:
         try:
             if config.module:
                 import importlib
+
                 module = importlib.import_module(config.module)
                 if not hasattr(module, "mcp"):
                     raise ValueError(f"Module {config.module} has no 'mcp' attribute")
@@ -186,7 +182,7 @@ class MCPServerManager:
 
             return ToolCallResult(
                 success=False,
-                error=f"Cannot call tool on this server type",
+                error="Cannot call tool on this server type",
                 server=server,
                 tool=tool,
             )

@@ -36,7 +36,9 @@ class Message:
     @classmethod
     def from_dict(cls, data: dict[str, str | float]) -> Self:
         """Create Message from dictionary."""
-        return cls(role=str(data["role"]), content=str(data["content"]), timestamp=float(data["timestamp"]))
+        return cls(
+            role=str(data["role"]), content=str(data["content"]), timestamp=float(data["timestamp"])
+        )
 
 
 class SessionMemory:

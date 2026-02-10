@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
+from roxy.macos.applescript import (
+    escape_applescript_string,
+    get_applescript_runner,
+    get_joinlist_handler,
+)
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.macos.applescript import escape_applescript_string, get_applescript_runner, get_joinlist_handler
 
 logger = logging.getLogger(__name__)
 
@@ -191,11 +194,13 @@ class RemindersSkill(RoxySkill):
             for rem_str in output.split(";;;"):
                 parts = rem_str.split("|||")
                 if len(parts) >= 3:
-                    reminders.append({
-                        "name": parts[0].strip(),
-                        "due_date": parts[1].strip(),
-                        "completed": parts[2].strip() == "true",
-                    })
+                    reminders.append(
+                        {
+                            "name": parts[0].strip(),
+                            "due_date": parts[1].strip(),
+                            "completed": parts[2].strip() == "true",
+                        }
+                    )
 
             return reminders
 
@@ -219,7 +224,7 @@ class RemindersSkill(RoxySkill):
         if any(kw in user_input for kw in add_keywords):
             # Extract reminder title
             # Pattern: "remind me to [do something]"
-            remind_match = re.search(r'remind me to\s+(.+?)(?:\s+(?:by|on|at)\s+|$)', user_input)
+            remind_match = re.search(r"remind me to\s+(.+?)(?:\s+(?:by|on|at)\s+|$)", user_input)
             if remind_match:
                 title = remind_match.group(1).strip()
             else:
@@ -281,7 +286,7 @@ class RemindersSkill(RoxySkill):
 
         for i, rem in enumerate(incomplete, 1):
             lines.append(f"{i}. {rem['name']}")
-            if rem['due_date']:
+            if rem["due_date"]:
                 lines.append(f"   Due: {rem['due_date']}")
             lines.append("")
 

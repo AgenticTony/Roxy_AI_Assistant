@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import logging
 import re
-from pathlib import Path
-from typing import Any
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
 
@@ -136,7 +134,6 @@ class FileSearchSkill(RoxySkill):
             return parameters["query"]
 
         # Try to extract query from common patterns
-        import re
 
         # Pattern: "find file about [topic]", "search for [query]", "look for [query]"
         patterns = [

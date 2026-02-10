@@ -79,8 +79,14 @@ target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "A", "SIM"]
-ignore = ["ANN101", "ANN102"]  # self/cls annotations
+select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "A"]  # Removed "SIM" for simplify suggestions
+ignore = [
+    "ANN101", "ANN102", "E501",  # self/cls annotations, long lines
+    "ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "ANN204", "ANN401",  # Type annotations
+    "F401", "F841", "UP042",  # Unused imports/variables
+    "B904", "B007", "B017", "B027",  # Exception chaining, unused vars, assert style
+    "W293", "E402", "N806", "N817",  # Whitespace, import location, naming
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

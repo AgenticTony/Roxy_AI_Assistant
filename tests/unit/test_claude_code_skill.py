@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from roxy.skills.base import Permission, SkillContext
 from roxy.skills.dev.claude_code import ClaudeCodeSkill
-from roxy.skills.base import SkillContext, SkillResult, Permission
 
 
 class TestClaudeCodeSkill:
@@ -33,13 +33,13 @@ class TestClaudeCodeSkill:
         skill = ClaudeCodeSkill()
 
         # Should detect available editors or set to None
-        assert hasattr(skill, '_available_editor')
+        assert hasattr(skill, "_available_editor")
 
     def test_find_editor_success(self):
         """Test finding an available editor."""
         skill = ClaudeCodeSkill()
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout="/usr/bin/vim")
 
             editor = skill._find_editor()
@@ -49,7 +49,7 @@ class TestClaudeCodeSkill:
         """Test when no editor is available."""
         skill = ClaudeCodeSkill()
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1)
 
             editor = skill._find_editor()
@@ -61,7 +61,7 @@ class TestClaudeCodeSkill:
         """Test successfully opening terminal."""
         skill = ClaudeCodeSkill()
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
 
             result = skill._open_terminal(Path("/Users/test/project"))
@@ -72,7 +72,7 @@ class TestClaudeCodeSkill:
         """Test handling when terminal open fails."""
         skill = ClaudeCodeSkill()
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.side_effect = Exception("Terminal error")
 
             result = skill._open_terminal(Path("/Users/test/project"))
@@ -84,7 +84,7 @@ class TestClaudeCodeSkill:
         skill = ClaudeCodeSkill()
         skill._available_editor = "cursor"
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
 
             result = skill._open_editor(Path("/Users/test/project"))
@@ -96,7 +96,7 @@ class TestClaudeCodeSkill:
         skill = ClaudeCodeSkill()
         skill._available_editor = "code"
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
 
             result = skill._open_editor(Path("/Users/test/project"))
@@ -132,7 +132,9 @@ class TestClaudeCodeSkill:
         skill = ClaudeCodeSkill()
         memory = MagicMock()
         memory.recall = AsyncMock(return_value=['{"path": "/Users/test/project"}'])
-        memory.get_user_preferences = AsyncMock(return_value={"current_project": {"path": "/Users/test/project"}})
+        memory.get_user_preferences = AsyncMock(
+            return_value={"current_project": {"path": "/Users/test/project"}}
+        )
 
         context = SkillContext(
             user_input="start development",
@@ -176,9 +178,9 @@ class TestClaudeCodeSkill:
         skill._available_editor = "cursor"
 
         # Mock Path.exists to return True
-        with patch('pathlib.Path.exists', return_value=True):
-            with patch.object(skill, '_open_editor', return_value=True):
-                with patch.object(skill, '_open_terminal', return_value=True):
+        with patch("pathlib.Path.exists", return_value=True):
+            with patch.object(skill, "_open_editor", return_value=True):
+                with patch.object(skill, "_open_terminal", return_value=True):
                     result = await skill.launch_dev_mode(Path("/Users/test/project"))
 
                     assert "cursor" in result.lower() or "terminal" in result.lower()
@@ -190,7 +192,7 @@ class TestClaudeCodeSkill:
         skill = ClaudeCodeSkill()
         skill._available_editor = None
 
-        with patch.object(skill, '_open_terminal', return_value=True):
+        with patch.object(skill, "_open_terminal", return_value=True):
             result = await skill.launch_dev_mode(Path("/Users/test/project"))
 
             assert "terminal" in result.lower() or "project" in result.lower()
@@ -210,11 +212,16 @@ class TestClaudeCodeSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'launch_dev_mode', new=AsyncMock(return_value="Dev environment ready")):
+        with patch.object(
+            skill, "launch_dev_mode", new=AsyncMock(return_value="Dev environment ready")
+        ):
             result = await skill.execute(context)
 
             assert result.success is True
-            assert "dev" in result.response_text.lower() or "environment" in result.response_text.lower()
+            assert (
+                "dev" in result.response_text.lower()
+                or "environment" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_execute_with_cursor_editor(self):
@@ -230,7 +237,7 @@ class TestClaudeCodeSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, '_open_editor', return_value=True) as mock_open:
+        with patch.object(skill, "_open_editor", return_value=True) as mock_open:
             result = await skill.execute(context)
 
             assert result.success is True
@@ -251,7 +258,7 @@ class TestClaudeCodeSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, '_get_project_path', new=AsyncMock(return_value=None)):
+        with patch.object(skill, "_get_project_path", new=AsyncMock(return_value=None)):
             result = await skill.execute(context)
 
             assert result.success is False
@@ -284,7 +291,7 @@ class TestClaudeCodeSkillSecurity:
         skill = ClaudeCodeSkill()
         dangerous_path = Path("/Users/test;rm -rf /")
 
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             # Mock terminal check and command
             mock_run.return_value = MagicMock(returncode=0)
 
@@ -299,7 +306,9 @@ class TestClaudeCodeSkillSecurity:
         skill = ClaudeCodeSkill()
         memory = MagicMock()
         memory.recall = AsyncMock(return_value=['{"path": "/nonexistent/path"}'])
-        memory.get_user_preferences = AsyncMock(return_value={"current_project": {"path": "/nonexistent/path"}})
+        memory.get_user_preferences = AsyncMock(
+            return_value={"current_project": {"path": "/nonexistent/path"}}
+        )
 
         context = SkillContext(
             user_input="start development",

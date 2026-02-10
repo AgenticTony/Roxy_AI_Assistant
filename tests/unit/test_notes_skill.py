@@ -6,10 +6,11 @@ Tests creating, listing, and searching notes in macOS Notes.app.
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
+from roxy.skills.base import Permission, SkillContext
 from roxy.skills.productivity.notes import NotesSkill
-from roxy.skills.base import SkillContext, SkillResult, Permission
 
 
 class TestNotesSkill:
@@ -29,7 +30,7 @@ class TestNotesSkill:
         """Test skill initialization."""
         skill = NotesSkill()
 
-        assert hasattr(skill, '_applescript')
+        assert hasattr(skill, "_applescript")
         assert skill._applescript is not None
 
     @pytest.mark.asyncio
@@ -38,8 +39,8 @@ class TestNotesSkill:
         skill = NotesSkill()
 
         # Mock the applescript runner
-        with patch.object(skill, '_applescript') as mock_runner:
-            mock_runner.run_jxa = AsyncMock(return_value='[]')
+        with patch.object(skill, "_applescript") as mock_runner:
+            mock_runner.run_jxa = AsyncMock(return_value="[]")
 
             notes = await skill.get_notes()
             assert notes == []
@@ -49,8 +50,8 @@ class TestNotesSkill:
         """Test creating a new note."""
         skill = NotesSkill()
 
-        with patch.object(skill, '_applescript') as mock_runner:
-            mock_runner.run_jxa = AsyncMock(return_value='')
+        with patch.object(skill, "_applescript") as mock_runner:
+            mock_runner.run_jxa = AsyncMock(return_value="")
 
             result = await skill.create_note("Test Title", "Test Body")
             assert result is True
@@ -60,8 +61,8 @@ class TestNotesSkill:
         """Test creating a note with special characters that need escaping."""
         skill = NotesSkill()
 
-        with patch.object(skill, '_applescript') as mock_runner:
-            mock_runner.run_jxa = AsyncMock(return_value='')
+        with patch.object(skill, "_applescript") as mock_runner:
+            mock_runner.run_jxa = AsyncMock(return_value="")
 
             # Test with special characters
             result = await skill.create_note('Test "Quote"', 'Text with "quotes"')
@@ -80,7 +81,7 @@ class TestNotesSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'get_notes') as mock_get:
+        with patch.object(skill, "get_notes") as mock_get:
             mock_get.return_value = [
                 {"name": "Note 1", "body": "Body 1"},
                 {"name": "Note 2", "body": "Body 2"},
@@ -104,7 +105,7 @@ class TestNotesSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'create_note') as mock_create:
+        with patch.object(skill, "create_note") as mock_create:
             mock_create.return_value = True
 
             result = await skill.execute(context)
@@ -125,13 +126,16 @@ class TestNotesSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'create_note') as mock_create:
+        with patch.object(skill, "create_note") as mock_create:
             mock_create.return_value = False
 
             result = await skill.execute(context)
 
             assert result.success is False
-            assert "couldn't" in result.response_text.lower() or "failed" in result.response_text.lower()
+            assert (
+                "couldn't" in result.response_text.lower()
+                or "failed" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_can_handle_list_phrases(self):
@@ -181,7 +185,7 @@ class TestNotesSkill:
         """Test get_notes handles errors gracefully."""
         skill = NotesSkill()
 
-        with patch.object(skill, '_applescript') as mock_runner:
+        with patch.object(skill, "_applescript") as mock_runner:
             mock_runner.run_jxa = AsyncMock(side_effect=Exception("Notes error"))
 
             notes = await skill.get_notes()
@@ -194,9 +198,9 @@ class TestNotesSkill:
         skill = NotesSkill()
 
         # If there's a search method, test it
-        if hasattr(skill, 'search_notes'):
-            with patch.object(skill, '_applescript') as mock_runner:
-                mock_runner.run_jxa = AsyncMock(return_value='[]')
+        if hasattr(skill, "search_notes"):
+            with patch.object(skill, "_applescript") as mock_runner:
+                mock_runner.run_jxa = AsyncMock(return_value="[]")
 
                 results = await skill.search_notes("test query")
                 assert isinstance(results, list)
@@ -214,8 +218,8 @@ class TestNotesSkillSecurity:
         skill = NotesSkill()
         dangerous_title = 'Note"; do shell script "rm -rf /'
 
-        with patch.object(skill, '_applescript') as mock_runner:
-            mock_runner.run_jxa = AsyncMock(return_value='')
+        with patch.object(skill, "_applescript") as mock_runner:
+            mock_runner.run_jxa = AsyncMock(return_value="")
 
             # Should handle dangerous input without crashing
             result = await skill.create_note(dangerous_title, "body")

@@ -30,7 +30,7 @@ for optional_dir in OPTIONAL_ALLOWED_DIRS:
 
 def validate_path(path_str: str, must_exist: bool = False) -> Path:
     """Validate and resolve a file path.
-    
+
     Prevents path traversal attacks by ensuring the resolved path
     is within allowed base directories.
     """
@@ -51,9 +51,7 @@ def validate_path(path_str: str, must_exist: bool = False) -> Path:
 
     if not is_allowed:
         allowed_dirs_str = ", ".join(str(d) for d in ALLOWED_BASE_DIRS)
-        raise ValueError(
-            f"Path '{path_str}' is outside allowed directories: {allowed_dirs_str}"
-        )
+        raise ValueError(f"Path '{path_str}' is outside allowed directories: {allowed_dirs_str}")
 
     if must_exist and not path.exists():
         raise FileNotFoundError(f"Path '{path_str}' does not exist")

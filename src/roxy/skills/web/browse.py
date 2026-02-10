@@ -227,7 +227,7 @@ class BrowseSkill(RoxySkill):
 
             return str(result)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return "Browsing task timed out after 60 seconds"
         except Exception as e:
             logger.error(f"Interactive browse error: {e}")
@@ -274,7 +274,7 @@ class BrowseSkill(RoxySkill):
             "get": "get information",
         }
 
-        is_simple_browse = any(kw in user_input.lower() for kw in task_keywords.keys())
+        is_simple_browse = any(kw in user_input.lower() for kw in task_keywords)
 
         try:
             if is_simple_browse:
@@ -287,7 +287,10 @@ class BrowseSkill(RoxySkill):
             return SkillResult(
                 success=True,
                 response_text=result,
-                data={"url": url, "method": "browse_and_summarize" if is_simple_browse else "interactive"},
+                data={
+                    "url": url,
+                    "method": "browse_and_summarize" if is_simple_browse else "interactive",
+                },
             )
 
         except Exception as e:

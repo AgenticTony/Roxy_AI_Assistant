@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import subprocess
-from typing import Any
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
 
@@ -159,9 +157,7 @@ class ShortcutsSkill(RoxySkill):
                 speak=True,
             )
 
-    async def _run_shortcut(
-        self, shortcut_name: str, parameters: dict
-    ) -> SkillResult:
+    async def _run_shortcut(self, shortcut_name: str, parameters: dict) -> SkillResult:
         """
         Run a shortcut.
 
@@ -263,8 +259,7 @@ class ShortcutsSkill(RoxySkill):
             # Find similar shortcuts (case-insensitive substring match)
             shortcut_lower = shortcut_name.lower()
             similar = [
-                s for s in shortcuts
-                if shortcut_lower in s.lower() or s.lower() in shortcut_lower
+                s for s in shortcuts if shortcut_lower in s.lower() or s.lower() in shortcut_lower
             ]
 
             return similar

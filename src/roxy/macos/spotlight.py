@@ -6,7 +6,6 @@ Provides mdfind / NSMetadataQuery wrapper for file searching.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import subprocess
 from datetime import datetime, timedelta
@@ -32,11 +31,7 @@ class SpotlightSearch:
     def _check_available(self) -> bool:
         """Check if mdfind command is available on the system."""
         try:
-            result = subprocess.run(
-                ["mdfind", "-help"],
-                capture_output=True,
-                timeout=1
-            )
+            result = subprocess.run(["mdfind", "-help"], capture_output=True, timeout=1)
             return result.returncode == 0
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return False

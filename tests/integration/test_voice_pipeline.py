@@ -10,15 +10,14 @@ Tests the complete voice pipeline:
 
 from __future__ import annotations
 
-import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch, mock_open
-from io import BytesIO
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from roxy.config import RoxyConfig
-from roxy.voice.pipeline import VoicePipeline
+import pytest
+
 from roxy.brain.orchestrator import RoxyOrchestrator
+from roxy.config import RoxyConfig
 from roxy.skills.registry import SkillRegistry
+from roxy.voice.pipeline import VoicePipeline
 
 
 @pytest.mark.asyncio
@@ -121,10 +120,11 @@ async def test_voice_pipeline_full_flow(mock_config: RoxyConfig) -> None:
         )
 
         # Mock components
-        with patch.object(pipeline, "_wake_word_detector") as mock_wake, \
-             patch.object(pipeline, "_stt_engine") as mock_stt, \
-             patch.object(pipeline, "_tts_engine") as mock_tts:
-
+        with (
+            patch.object(pipeline, "_wake_word_detector") as mock_wake,
+            patch.object(pipeline, "_stt_engine") as mock_stt,
+            patch.object(pipeline, "_tts_engine") as mock_tts,
+        ):
             # Setup mocks
             mock_wake.detect.return_value = True
             mock_stt.transcribe.return_value = "What time is it?"

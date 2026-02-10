@@ -5,12 +5,13 @@ Tests calendar functionality with AppleScript mocks.
 
 from __future__ import annotations
 
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
+import pytest
+
+from roxy.macos.applescript import AppleScriptRunner
 from roxy.skills.base import SkillContext, StubMemoryManager
 from roxy.skills.productivity.calendar import CalendarSkill
-from roxy.macos.applescript import AppleScriptRunner
 
 
 @pytest.fixture
@@ -79,7 +80,7 @@ class TestCalendarSkill:
     async def test_get_events_with_results(self, calendar_skill, mock_applescript):
         """Test getting events when events exist."""
         # Mock AppleScript response - format from listToString is comma-separated, events separated by |||
-        mock_applescript.run.return_value = 'Team Standup, Monday January 15 2024 at 9:00:00 AM, Monday January 15 2024 at 9:30:00 AM, Conference Room A|||Lunch with Sarah, Monday January 15 2024 at 12:00:00 PM, Monday January 15 2024 at 1:00:00 PM,'
+        mock_applescript.run.return_value = "Team Standup, Monday January 15 2024 at 9:00:00 AM, Monday January 15 2024 at 9:30:00 AM, Conference Room A|||Lunch with Sarah, Monday January 15 2024 at 12:00:00 PM, Monday January 15 2024 at 1:00:00 PM,"
 
         events = await calendar_skill.get_events()
 
@@ -146,7 +147,9 @@ class TestCalendarSkill:
     async def test_execute_with_events_found(self, calendar_skill, mock_applescript, skill_context):
         """Test executing skill when events are found."""
         # Mock AppleScript with events
-        mock_applescript.run.return_value = 'Team Standup, Monday at 9:00 AM, Monday at 9:30 AM, Room A|||'
+        mock_applescript.run.return_value = (
+            "Team Standup, Monday at 9:00 AM, Monday at 9:30 AM, Room A|||"
+        )
 
         result = await calendar_skill.execute(skill_context)
 

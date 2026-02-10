@@ -6,7 +6,6 @@ Provides information about running processes, system resources, and system statu
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
 
@@ -281,6 +280,8 @@ class SystemInfoSkill(RoxySkill):
             speak=True,
             data={
                 "apps": apps_result.data.get("apps", []) if apps_result.data else [],
-                "system_info": system_result.data.get("system_info", {}) if system_result.data else {},
+                "system_info": system_result.data.get("system_info", {})
+                if system_result.data
+                else {},
             },
         )

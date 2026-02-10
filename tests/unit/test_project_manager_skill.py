@@ -11,12 +11,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from roxy.skills.base import Permission, SkillContext, SkillResult
 from roxy.skills.dev.project_manager import (
-    ProjectManagerSkill,
-    ProjectInfo,
     ProjectAction,
+    ProjectInfo,
+    ProjectManagerSkill,
 )
-from roxy.skills.base import SkillContext, SkillResult, Permission
 
 
 class TestProjectInfo:
@@ -151,7 +151,7 @@ class TestProjectManagerSkill:
         skill = ProjectManagerSkill()
 
         # Create temporary directory with Python markers
-        with patch('pathlib.Path.exists', return_value=True):
+        with patch("pathlib.Path.exists", return_value=True):
             language, framework = skill._detect_project_metadata(Path("/fake/path"))
 
             # Will return empty strings since we can't actually create files
@@ -178,11 +178,13 @@ class TestProjectManagerSkill:
 
         # Use current directory as test project
         current_dir = str(Path.cwd())
-        with patch.object(skill, '_find_project_directory', return_value=Path(current_dir)):
+        with patch.object(skill, "_find_project_directory", return_value=Path(current_dir)):
             result = await skill.start_project(context, "roxy")
 
             assert result.success is True
-            assert "roxy" in result.response_text.lower() or "project" in result.response_text.lower()
+            assert (
+                "roxy" in result.response_text.lower() or "project" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_start_project_not_found(self):
@@ -202,7 +204,7 @@ class TestProjectManagerSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, '_find_project_directory', return_value=None):
+        with patch.object(skill, "_find_project_directory", return_value=None):
             result = await skill.start_project(context, "nonexistent", create_if_missing=False)
 
             assert result.success is False
@@ -226,13 +228,12 @@ class TestProjectManagerSkill:
             conversation_history=[],
         )
 
-        with patch('pathlib.Path.mkdir'):
-            with patch('pathlib.Path.write_text'):
-                with patch('subprocess.run'):
-                    result = await skill.create_project(context, "test-project")
+        with patch("pathlib.Path.mkdir"), patch("pathlib.Path.write_text"):
+            with patch("subprocess.run"):
+                result = await skill.create_project(context, "test-project")
 
-                    # Should succeed
-                    assert result.success is True or "project" in result.response_text.lower()
+                # Should succeed
+                assert result.success is True or "project" in result.response_text.lower()
 
     @pytest.mark.asyncio
     async def test_list_projects_empty(self):
@@ -257,7 +258,10 @@ class TestProjectManagerSkill:
         result = await skill.list_projects(context)
 
         assert result.success is True
-        assert "no projects" in result.response_text.lower() or "registered yet" in result.response_text.lower()
+        assert (
+            "no projects" in result.response_text.lower()
+            or "registered yet" in result.response_text.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_list_projects_with_items(self):
@@ -332,7 +336,10 @@ class TestProjectManagerSkill:
         result = await skill.close_project(context)
 
         assert result.success is True
-        assert "no project" in result.response_text.lower() or "currently active" in result.response_text.lower()
+        assert (
+            "no project" in result.response_text.lower()
+            or "currently active" in result.response_text.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_execute_list_action(self):
@@ -351,10 +358,16 @@ class TestProjectManagerSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'list_projects', new=AsyncMock(return_value=SkillResult(
-            success=True,
-            response_text="No projects registered",
-        ))):
+        with patch.object(
+            skill,
+            "list_projects",
+            new=AsyncMock(
+                return_value=SkillResult(
+                    success=True,
+                    response_text="No projects registered",
+                )
+            ),
+        ):
             result = await skill.execute(context)
 
             assert result.success is True
@@ -376,10 +389,16 @@ class TestProjectManagerSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'show_status', new=AsyncMock(return_value=SkillResult(
-            success=True,
-            response_text="No active project",
-        ))):
+        with patch.object(
+            skill,
+            "show_status",
+            new=AsyncMock(
+                return_value=SkillResult(
+                    success=True,
+                    response_text="No active project",
+                )
+            ),
+        ):
             result = await skill.execute(context)
 
             assert result.success is True
@@ -402,10 +421,16 @@ class TestProjectManagerSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'close_project', new=AsyncMock(return_value=SkillResult(
-            success=True,
-            response_text="No project is currently active",
-        ))):
+        with patch.object(
+            skill,
+            "close_project",
+            new=AsyncMock(
+                return_value=SkillResult(
+                    success=True,
+                    response_text="No project is currently active",
+                )
+            ),
+        ):
             result = await skill.execute(context)
 
             assert result.success is True

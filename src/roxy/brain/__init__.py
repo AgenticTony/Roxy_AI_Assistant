@@ -3,37 +3,37 @@
 Contains the core orchestration logic for Roxy's AI assistant.
 """
 
+from roxy.brain.factory import create_orchestrator, create_orchestrator_sync
 from roxy.brain.llm_clients import (
+    CloudLLMClient,
+    ConfidenceScorer,
     LLMClient,
     LLMResponse,
     OllamaClient,
-    CloudLLMClient,
-    ConfidenceScorer,
 )
+from roxy.brain.orchestrator import OrchestratorConfig, RoxyOrchestrator
 from roxy.brain.privacy import (
-    PrivacyGateway,
-    PIIMatch,
-    RedactionResult,
     ConsentMode,
+    PIIMatch,
+    PrivacyGateway,
+    RedactionResult,
 )
-from roxy.brain.rate_limiter import (
-    RateLimiter,
-    RateLimitConfig,
-    RateLimitRecord,
-    RateLimiterAware,
-)
-from roxy.brain.router import ConfidenceRouter
-from roxy.brain.orchestrator import RoxyOrchestrator, OrchestratorConfig
 from roxy.brain.protocols import (
-    PrivacyGatewayProtocol,
-    LocalLLMClientProtocol,
     CloudLLMClientProtocol,
     ConfidenceRouterProtocol,
+    LocalLLMClientProtocol,
     MemoryManagerProtocol,
+    PrivacyGatewayProtocol,
     SkillRegistryProtocol,
 )
-from roxy.brain.factory import create_orchestrator, create_orchestrator_sync
-from roxy.brain.tool_adapter import SkillToolAdapter, IntentClassifier
+from roxy.brain.rate_limiter import (
+    RateLimitConfig,
+    RateLimiter,
+    RateLimiterAware,
+    RateLimitRecord,
+)
+from roxy.brain.router import ConfidenceRouter
+from roxy.brain.tool_adapter import IntentClassifier, SkillToolAdapter
 
 __all__ = [
     # LLM clients

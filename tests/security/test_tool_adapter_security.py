@@ -11,19 +11,18 @@ Tests security-critical features added during hardening:
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from roxy.brain.tool_adapter import (
-    SkillToolAdapter,
     IntentClassifier,
     SkillCallStats,
+    SkillToolAdapter,
 )
-from roxy.skills.base import RoxySkill, SkillContext, SkillResult, Permission
+from roxy.skills.base import RoxySkill, SkillContext, SkillResult
 from roxy.skills.registry import SkillRegistry
-
 
 # =============================================================================
 # Test Skills
@@ -570,7 +569,7 @@ class TestErrorInformationDisclosure:
     @pytest.mark.asyncio
     async def test_timeout_error_message(self, adapter):
         """Test that timeout errors don't leak internal details."""
-        with patch.object(adapter, 'skill_timeout', 0.1):
+        with patch.object(adapter, "skill_timeout", 0.1):
             # Create a hanging skill
             SkillRegistry.reset()
             adapter.registry.register(HangingTestSkill)
@@ -665,7 +664,9 @@ class TestIntentClassifierSecurity:
         # Mock response with potential injection
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = (
+        mock_response.choices[
+            0
+        ].message.content = (
             '{"intent": "test", "confidence": 1.5, "parameters": {"malicious": "$(rm -rf /)"}}'
         )
         mock_client._client.chat.completions.create = AsyncMock(return_value=mock_response)
@@ -696,9 +697,9 @@ class TestIntentClassifierSecurity:
         # Mock response with JSON in code block
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = (
-            '```json\n{"intent": "test", "confidence": 0.8, "parameters": {}}\n```'
-        )
+        mock_response.choices[
+            0
+        ].message.content = '```json\n{"intent": "test", "confidence": 0.8, "parameters": {}}\n```'
         mock_client._client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         result = await classifier.classify("test input")

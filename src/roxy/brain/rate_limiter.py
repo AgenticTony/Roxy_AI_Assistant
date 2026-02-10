@@ -9,11 +9,9 @@ from __future__ import annotations
 import json
 import logging
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
-from typing import Literal
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +37,7 @@ class RateLimitRecord:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "RateLimitRecord":
+    def from_dict(cls, data: dict) -> RateLimitRecord:
         """Create from dictionary."""
         return cls(
             timestamp=data["timestamp"],
@@ -111,7 +109,7 @@ class RateLimiter:
                 f"Loaded {len(self._records)} rate limit records from {self._storage_path}"
             )
 
-        except (json.JSONDecodeError, KeyError, IOError) as e:
+        except (OSError, json.JSONDecodeError, KeyError) as e:
             logger.warning(f"Failed to load rate limit data: {e}. Starting fresh.")
             self._records = []
 
@@ -130,7 +128,7 @@ class RateLimiter:
 
             temp_path.replace(self._storage_path)
 
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to save rate limit data: {e}")
 
     def _cleanup_old_records(self) -> None:
@@ -138,9 +136,7 @@ class RateLimiter:
         cutoff_time = time.time() - (self._config.retention_hours * 3600)
 
         original_count = len(self._records)
-        self._records = [
-            r for r in self._records if r.timestamp >= cutoff_time
-        ]
+        self._records = [r for r in self._records if r.timestamp >= cutoff_time]
 
         removed = original_count - len(self._records)
         if removed > 0:
@@ -164,9 +160,7 @@ class RateLimiter:
         cutoff_time = time.time() - window_seconds
 
         return sum(
-            1
-            for r in self._records
-            if r.provider == provider and r.timestamp >= cutoff_time
+            1 for r in self._records if r.provider == provider and r.timestamp >= cutoff_time
         )
 
     def check_rate_limit(
@@ -194,7 +188,7 @@ class RateLimiter:
                 return (
                     False,
                     f"Rate limit exceeded: {minute_count} requests in the last minute "
-                    f"(limit: {self._config.requests_per_minute}/min)"
+                    f"(limit: {self._config.requests_per_minute}/min)",
                 )
 
             # Check per-hour limit
@@ -203,7 +197,7 @@ class RateLimiter:
                 return (
                     False,
                     f"Rate limit exceeded: {hour_count} requests in the last hour "
-                    f"(limit: {self._config.requests_per_hour}/hour)"
+                    f"(limit: {self._config.requests_per_hour}/hour)",
                 )
 
             return (True, "Rate limit OK")

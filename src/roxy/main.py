@@ -11,7 +11,6 @@ import signal
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import click
 from rich.console import Console
@@ -20,13 +19,12 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
 
-from .config import RoxyConfig, ConsentMode
 from .brain.orchestrator import RoxyOrchestrator
-from .skills import get_registry
-from .skills.registry import SkillRegistry
-from .voice.pipeline import VoicePipeline, create_voice_pipeline
+from .config import ConsentMode, RoxyConfig
 from .macos.menubar import RoxyMenuBar, get_menubar_app
 from .mcp.servers import MCPServerManager
+from .skills import get_registry
+from .voice.pipeline import VoicePipeline, create_voice_pipeline
 
 # Configure logging
 logging.basicConfig(
@@ -154,8 +152,7 @@ class RoxyInitializer:
             models_data = models_response.json()
 
             available_models = {
-                model.get("name", "").split(":")[0]
-                for model in models_data.get("models", [])
+                model.get("name", "").split(":")[0] for model in models_data.get("models", [])
             }
 
             required_models = [
@@ -186,20 +183,20 @@ class RoxyInitializer:
         """Register all available skills."""
         from roxy.skills import (
             AppLauncherSkill,
-            FileSearchSkill,
-            WindowManagerSkill,
-            SystemInfoSkill,
-            ClipboardSkill,
-            ShortcutsSkill,
-            WebSearchSkill,
             BrowseSkill,
-            FlightSearchSkill,
             CalendarSkill,
+            ClaudeCodeSkill,
+            ClipboardSkill,
             EmailSkill,
+            FileSearchSkill,
+            FlightSearchSkill,
+            GitOpsSkill,
             NotesSkill,
             RemindersSkill,
-            GitOpsSkill,
-            ClaudeCodeSkill,
+            ShortcutsSkill,
+            SystemInfoSkill,
+            WebSearchSkill,
+            WindowManagerSkill,
         )
 
         registry = get_registry()
@@ -258,6 +255,7 @@ class RoxyInitializer:
 
         # Discover and register any other skill modules
         import roxy.skills
+
         skills_dir = Path(roxy.skills.__file__).parent
         registry.discover(str(skills_dir))
 
@@ -410,7 +408,9 @@ class CommandHandler:
         config_table.add_row("", "")
         config_table.add_row("Cloud Provider", self.config.llm_cloud.provider.value)
         config_table.add_row("Cloud Model", self.config.llm_cloud.model)
-        config_table.add_row("Confidence Threshold", str(self.config.llm_cloud.confidence_threshold))
+        config_table.add_row(
+            "Confidence Threshold", str(self.config.llm_cloud.confidence_threshold)
+        )
         config_table.add_row("", "")
         config_table.add_row("PII Redaction", str(self.config.privacy.pii_redaction_enabled))
         config_table.add_row("Cloud Consent", self.config.privacy.cloud_consent.value)
@@ -592,11 +592,13 @@ class RoxyREPL:
             response = await self.orchestrator.process(user_input)
 
         console.print()
-        console.print(Panel(
-            Markdown(response),
-            title=f"[bold cyan]{self.config.name}[/bold cyan]",
-            border_style="cyan",
-        ))
+        console.print(
+            Panel(
+                Markdown(response),
+                title=f"[bold cyan]{self.config.name}[/bold cyan]",
+                border_style="cyan",
+            )
+        )
         console.print()
 
     def _print_welcome(self) -> None:

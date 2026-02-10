@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -140,13 +139,15 @@ class ClaudeCodeSkill(RoxySkill):
 
                 terminal_safe = escape_applescript_string(self.TERMINAL_APP)
                 path_safe = escape_applescript_string(str(path))
-                subprocess.run([
-                    "osascript",
-                    "-e",
-                    f'tell application "{terminal_safe}"\n'
-                    f'  do script "cd \\"{path_safe}\\" && vim"\n'
-                    f'end tell'
-                ])
+                subprocess.run(
+                    [
+                        "osascript",
+                        "-e",
+                        f'tell application "{terminal_safe}"\n'
+                        f'  do script "cd \\"{path_safe}\\" && vim"\n'
+                        f"end tell",
+                    ]
+                )
             else:
                 # Try opening as a file
                 subprocess.run([editor, str(path)], check=True)

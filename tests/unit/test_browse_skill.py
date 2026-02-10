@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from roxy.skills.base import Permission, SkillContext
 from roxy.skills.web.browse import BrowseSkill
-from roxy.skills.base import SkillContext, SkillResult, Permission
 
 
 class TestBrowseSkill:
@@ -31,8 +31,8 @@ class TestBrowseSkill:
         """Test skill initialization."""
         skill = BrowseSkill()
 
-        assert hasattr(skill, 'privacy_gateway')
-        assert hasattr(skill, 'REQUESTS_LOG')
+        assert hasattr(skill, "privacy_gateway")
+        assert hasattr(skill, "REQUESTS_LOG")
         # Log directory should be ensured to exist
         assert skill.REQUESTS_LOG.parent.exists() or Path.cwd() in skill.REQUESTS_LOG.parents
 
@@ -51,7 +51,7 @@ class TestBrowseSkill:
         # Create temporary log file
         log_path = Path("/tmp/test_browse.log")
 
-        with patch.object(skill, 'REQUESTS_LOG', log_path):
+        with patch.object(skill, "REQUESTS_LOG", log_path):
             skill._log_url("https://example.com", "test")
 
             # File should be created or appended to
@@ -102,15 +102,21 @@ class TestBrowseSkill:
         """Test successful browse and summarize."""
         skill = BrowseSkill()
 
-        with patch.object(skill, '_log_url'):
+        with patch.object(skill, "_log_url"):
             # Mock browser-use Agent - imported inside function
             mock_agent = MagicMock()
-            mock_agent.run = AsyncMock(return_value="Page summary: This is a test page about AI assistants.")
+            mock_agent.run = AsyncMock(
+                return_value="Page summary: This is a test page about AI assistants."
+            )
             mock_agent.browser.close = AsyncMock()
 
             # Mock imports at module level
-            with patch.dict('sys.modules', {'browser_use': MagicMock(Agent=MagicMock(return_value=mock_agent))}):
-                with patch.dict('sys.modules', {'langchain_openai': MagicMock(ChatOpenAI=MagicMock)}):
+            with patch.dict(
+                "sys.modules", {"browser_use": MagicMock(Agent=MagicMock(return_value=mock_agent))}
+            ):
+                with patch.dict(
+                    "sys.modules", {"langchain_openai": MagicMock(ChatOpenAI=MagicMock)}
+                ):
                     result = await skill.browse_and_summarize("https://example.com")
 
                     # Check for success or error (module may not be installed)
@@ -121,47 +127,58 @@ class TestBrowseSkill:
         """Test browse and summarize when browser-use is not available."""
         skill = BrowseSkill()
 
-        with patch.object(skill, '_log_url'):
+        with patch.object(skill, "_log_url"):
             # Force ImportError by patching sys.modules
-            with patch.dict('sys.modules', {}, clear=False):
+            with patch.dict("sys.modules", {}, clear=False):
                 # Make browser_use.Agent raise ImportError
                 import sys
+
                 browser_use_mock = MagicMock()
-                browser_use_mock.Agent = MagicMock(side_effect=ImportError("No module named 'browser_use'"))
-                sys.modules['browser_use'] = browser_use_mock
+                browser_use_mock.Agent = MagicMock(
+                    side_effect=ImportError("No module named 'browser_use'")
+                )
+                sys.modules["browser_use"] = browser_use_mock
 
                 # Mock MCP fallback at import location
                 mock_manager = MagicMock()
                 mock_result = MagicMock(
-                    success=True,
-                    data={"markdown": "Scraped content from example.com"}
+                    success=True, data={"markdown": "Scraped content from example.com"}
                 )
                 mock_manager.call_tool = AsyncMock(return_value=mock_result)
                 mock_manager.start_server = AsyncMock()
 
-                with patch.dict('sys.modules', {'roxy.mcp': MagicMock(MCPServerManager=MagicMock(return_value=mock_manager))}):
+                with patch.dict(
+                    "sys.modules",
+                    {"roxy.mcp": MagicMock(MCPServerManager=MagicMock(return_value=mock_manager))},
+                ):
                     result = await skill.browse_and_summarize("https://example.com")
 
                     # Should return something or handle error gracefully
                     assert result is not None
 
                 # Clean up
-                if 'browser_use' in sys.modules:
-                    del sys.modules['browser_use']
+                if "browser_use" in sys.modules:
+                    del sys.modules["browser_use"]
 
     @pytest.mark.asyncio
     async def test_interactive_browse_with_url(self):
         """Test interactive browsing with URL."""
         skill = BrowseSkill()
 
-        with patch.object(skill, '_log_url'):
+        with patch.object(skill, "_log_url"):
             mock_agent = MagicMock()
             mock_agent.run = AsyncMock(return_value="Task completed: Found the information.")
             mock_agent.browser.close = AsyncMock()
 
-            with patch.dict('sys.modules', {'browser_use': MagicMock(Agent=MagicMock(return_value=mock_agent))}):
-                with patch.dict('sys.modules', {'langchain_openai': MagicMock(ChatOpenAI=MagicMock)}):
-                    result = await skill.interactive_browse("Find the contact page", "https://example.com")
+            with patch.dict(
+                "sys.modules", {"browser_use": MagicMock(Agent=MagicMock(return_value=mock_agent))}
+            ):
+                with patch.dict(
+                    "sys.modules", {"langchain_openai": MagicMock(ChatOpenAI=MagicMock)}
+                ):
+                    result = await skill.interactive_browse(
+                        "Find the contact page", "https://example.com"
+                    )
 
                     # Should return something
                     assert result is not None
@@ -171,7 +188,7 @@ class TestBrowseSkill:
         """Test interactive browse timeout."""
         skill = BrowseSkill()
 
-        with patch.object(skill, '_log_url'):
+        with patch.object(skill, "_log_url"):
             import asyncio
 
             async def slow_run():
@@ -182,13 +199,23 @@ class TestBrowseSkill:
             mock_agent.run = slow_run()
             mock_agent.browser.close = AsyncMock()
 
-            with patch.dict('sys.modules', {'browser_use': MagicMock(Agent=MagicMock(return_value=mock_agent))}):
-                with patch.dict('sys.modules', {'langchain_openai': MagicMock(ChatOpenAI=MagicMock)}):
-                    with patch('asyncio.wait_for', side_effect=asyncio.TimeoutError()):
-                        result = await skill.interactive_browse("Do something", "https://example.com")
+            with patch.dict(
+                "sys.modules", {"browser_use": MagicMock(Agent=MagicMock(return_value=mock_agent))}
+            ):
+                with patch.dict(
+                    "sys.modules", {"langchain_openai": MagicMock(ChatOpenAI=MagicMock)}
+                ):
+                    with patch("asyncio.wait_for", side_effect=TimeoutError()):
+                        result = await skill.interactive_browse(
+                            "Do something", "https://example.com"
+                        )
 
                         # Should handle timeout
-                        assert "timeout" in result.lower() or "timed out" in result.lower() or result is not None
+                        assert (
+                            "timeout" in result.lower()
+                            or "timed out" in result.lower()
+                            or result is not None
+                        )
 
     @pytest.mark.asyncio
     async def test_execute_with_url(self):
@@ -204,7 +231,9 @@ class TestBrowseSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'browse_and_summarize', new=AsyncMock(return_value="Summary: Example domain")):
+        with patch.object(
+            skill, "browse_and_summarize", new=AsyncMock(return_value="Summary: Example domain")
+        ):
             result = await skill.execute(context)
 
             # The result might have an error from the actual import, but the mock should work
@@ -235,8 +264,7 @@ class TestBrowseSkill:
         privacy_gateway = MagicMock()
         privacy_gateway.redact = MagicMock(
             return_value=MagicMock(
-                was_redacted=True,
-                redacted_text="https://example.com/user/REDACTED"
+                was_redacted=True, redacted_text="https://example.com/user/REDACTED"
             )
         )
 
@@ -254,7 +282,10 @@ class TestBrowseSkill:
         result = await skill.execute(context)
 
         assert result.success is False
-        assert "sensitive" in result.response_text.lower() or "personal" in result.response_text.lower()
+        assert (
+            "sensitive" in result.response_text.lower()
+            or "personal" in result.response_text.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_execute_interactive_browse(self):
@@ -270,11 +301,16 @@ class TestBrowseSkill:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'interactive_browse', new=AsyncMock(return_value="Form submitted")):
+        with patch.object(
+            skill, "interactive_browse", new=AsyncMock(return_value="Form submitted")
+        ):
             result = await skill.execute(context)
 
             assert result.success is True
-            assert "form" in result.response_text.lower() or "submitted" in result.response_text.lower()
+            assert (
+                "form" in result.response_text.lower()
+                or "submitted" in result.response_text.lower()
+            )
 
     @pytest.mark.asyncio
     async def test_can_handle_browse_phrases(self):
@@ -303,10 +339,7 @@ class TestBrowseSkillSecurity:
         """Test that execute method checks privacy gateway."""
         privacy_gateway = MagicMock()
         privacy_gateway.redact = MagicMock(
-            return_value=MagicMock(
-                was_redacted=False,
-                redacted_text="https://example.com"
-            )
+            return_value=MagicMock(was_redacted=False, redacted_text="https://example.com")
         )
 
         skill = BrowseSkill(privacy_gateway=privacy_gateway)
@@ -320,7 +353,7 @@ class TestBrowseSkillSecurity:
             conversation_history=[],
         )
 
-        with patch.object(skill, 'browse_and_summarize', new=AsyncMock(return_value="Summary")):
+        with patch.object(skill, "browse_and_summarize", new=AsyncMock(return_value="Summary")):
             await skill.execute(context)
 
             # Privacy gateway should have been called
@@ -332,7 +365,7 @@ class TestBrowseSkillSecurity:
         skill = BrowseSkill()
         log_path = Path("/tmp/test_browse_audit.log")
 
-        with patch.object(skill, 'REQUESTS_LOG', log_path):
+        with patch.object(skill, "REQUESTS_LOG", log_path):
             skill._log_url("https://example.com", "browse_and_summarize")
 
             if log_path.exists():

@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-import pytest
-import tempfile
 import os
 from pathlib import Path
 
+import pytest
+
 from roxy.macos.path_validation import (
-    validate_path,
-    validate_file_path,
-    validate_directory_path,
-    add_allowed_directory,
     ALLOWED_BASE_DIRS,
+    add_allowed_directory,
+    validate_directory_path,
+    validate_file_path,
+    validate_path,
 )
 
 

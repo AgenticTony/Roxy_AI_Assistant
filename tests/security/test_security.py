@@ -13,8 +13,6 @@ Target: 20+ security tests with >80% coverage of security-critical code.
 
 from __future__ import annotations
 
-import asyncio
-import json
 import os
 import tempfile
 from pathlib import Path
@@ -22,30 +20,25 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import urlencode
 
 import pytest
-import subprocess
 
 from roxy.brain.privacy import (
     PrivacyGateway,
-    PIIMatch,
-    RedactionResult,
-    ConsentMode,
-)
-from roxy.macos.path_validation import (
-    validate_path,
-    validate_file_path,
-    validate_directory_path,
-    add_allowed_directory,
-    ALLOWED_BASE_DIRS,
 )
 from roxy.macos.applescript import (
     AppleScriptRunner,
     escape_applescript_string,
 )
-from roxy.skills.permissions import PermissionManager, Permission
+from roxy.macos.path_validation import (
+    ALLOWED_BASE_DIRS,
+    add_allowed_directory,
+    validate_directory_path,
+    validate_file_path,
+    validate_path,
+)
 from roxy.skills.base import RoxySkill, SkillContext, SkillResult
+from roxy.skills.permissions import Permission, PermissionManager
 from roxy.skills.system.file_search import FileSearchSkill
 from roxy.skills.web.search import WebSearchSkill
-
 
 # =============================================================================
 # Section 1: Command Injection Prevention Tests
@@ -307,26 +300,29 @@ class TestAppleScriptInjectionPrevention:
         assert escape_applescript_string('Hello "World"') == 'Hello \\"World\\"'
 
         # Test multiple quotes
-        assert escape_applescript_string('He said "hello" and "goodbye"') == 'He said \\"hello\\" and \\"goodbye\\"'
+        assert (
+            escape_applescript_string('He said "hello" and "goodbye"')
+            == 'He said \\"hello\\" and \\"goodbye\\"'
+        )
 
         # Test quotes at edges
         assert escape_applescript_string('"test"') == '\\"test\\"'
 
     def test_escape_applescript_string_backslashes(self) -> None:
         """Test that backslashes are properly escaped."""
-        assert escape_applescript_string('path\\to\\file') == 'path\\\\to\\\\file'
-        assert escape_applescript_string('\\\\') == '\\\\\\\\'
-        assert escape_applescript_string('\\n') == '\\\\n'
+        assert escape_applescript_string("path\\to\\file") == "path\\\\to\\\\file"
+        assert escape_applescript_string("\\\\") == "\\\\\\\\"
+        assert escape_applescript_string("\\n") == "\\\\n"
 
     def test_escape_applescript_string_line_breaks(self) -> None:
         """Test that line breaks are properly escaped."""
-        assert escape_applescript_string('line1\nline2') == 'line1\\nline2'
-        assert escape_applescript_string('line1\rline2') == 'line1\\rline2'
-        assert escape_applescript_string('line1\r\nline2') == 'line1\\r\\nline2'
+        assert escape_applescript_string("line1\nline2") == "line1\\nline2"
+        assert escape_applescript_string("line1\rline2") == "line1\\rline2"
+        assert escape_applescript_string("line1\r\nline2") == "line1\\r\\nline2"
 
     def test_escape_applescript_string_tabs(self) -> None:
         """Test that tabs are properly escaped."""
-        assert escape_applescript_string('col1\tcol2') == 'col1\\tcol2'
+        assert escape_applescript_string("col1\tcol2") == "col1\\tcol2"
 
     def test_escape_applescript_string_combined(self) -> None:
         """Test that multiple special characters are handled correctly."""
@@ -335,9 +331,9 @@ class TestAppleScriptInjectionPrevention:
 
         # All special characters should be escaped
         assert '\\"' in result  # quotes
-        assert '\\n' in result  # newline
-        assert '\\\\' in result  # backslash
-        assert '\\t' in result  # tab
+        assert "\\n" in result  # newline
+        assert "\\\\" in result  # backslash
+        assert "\\t" in result  # tab
 
     def test_escape_applescript_string_injection_attempts(self) -> None:
         """Test that common AppleScript injection patterns are neutralized."""
@@ -354,10 +350,14 @@ class TestAppleScriptInjectionPrevention:
         for attempt in injection_attempts:
             escaped = escape_applescript_string(attempt)
             # Should escape quotes, preventing script termination
-            assert '\\"' in escaped or '\\n' in escaped or '\\r' in escaped
+            assert '\\"' in escaped or "\\n" in escaped or "\\r" in escaped
             # The escaped version should not be executable as AppleScript code
             # Quotes are escaped which breaks the injection pattern
-            assert 'do shell script' not in escaped or escaped.count('do shell script') == 0 or '\\"' in escaped
+            assert (
+                "do shell script" not in escaped
+                or escaped.count("do shell script") == 0
+                or '\\"' in escaped
+            )
 
     def test_escape_applescript_string_null_bytes(self) -> None:
         """Test that null bytes are stripped for security."""
@@ -391,7 +391,7 @@ class TestAppleScriptInjectionPrevention:
         runner = AppleScriptRunner()
 
         # Mock the run method to avoid actual execution
-        with patch.object(runner, 'run', new_callable=AsyncMock) as mock_run:
+        with patch.object(runner, "run", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = ""
 
             # Test injection attempt with quotes (should be escaped)
@@ -402,13 +402,13 @@ class TestAppleScriptInjectionPrevention:
             assert '\\"' in script_arg
 
         # Test line breaks are escaped
-        with patch.object(runner, 'run', new_callable=AsyncMock) as mock_run:
+        with patch.object(runner, "run", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = ""
-            url_with_newline = 'http://example.com\nevil code'
+            url_with_newline = "http://example.com\nevil code"
             await runner.open_url(url_with_newline)
             script_arg = mock_run.call_args[0][0]
             # Newline should be escaped
-            assert '\\n' in script_arg
+            assert "\\n" in script_arg
             # The newline in the URL should not create actual newlines in script
             # (it should be a literal \n sequence)
 
@@ -418,7 +418,7 @@ class TestAppleScriptInjectionPrevention:
         runner = AppleScriptRunner()
 
         # Test injection with quotes
-        with patch.object(runner, 'run', new_callable=AsyncMock) as mock_run:
+        with patch.object(runner, "run", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = ""
             malicious_input = 'Title"; do shell script "evil"; display dialog "'
             await runner.send_notification(malicious_input, malicious_input)
@@ -427,12 +427,12 @@ class TestAppleScriptInjectionPrevention:
             assert '\\"' in script_arg
 
         # Test line breaks are escaped
-        with patch.object(runner, 'run', new_callable=AsyncMock) as mock_run:
+        with patch.object(runner, "run", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = ""
-            await runner.send_notification('Title\nevil', 'Message\revil')
+            await runner.send_notification("Title\nevil", "Message\revil")
             script_arg = mock_run.call_args[0][0]
             # Newlines should be escaped
-            assert '\\n' in script_arg or '\\r' in script_arg
+            assert "\\n" in script_arg or "\\r" in script_arg
 
     @pytest.mark.asyncio
     async def test_applescript_runner_set_clipboard_injection(self) -> None:
@@ -440,7 +440,7 @@ class TestAppleScriptInjectionPrevention:
         runner = AppleScriptRunner()
 
         # Test injection with quotes
-        with patch.object(runner, 'run', new_callable=AsyncMock) as mock_run:
+        with patch.object(runner, "run", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = "success"
             malicious_text = '"; do shell script "rm -rf /"; "'
             await runner.set_clipboard(malicious_text)
@@ -449,12 +449,12 @@ class TestAppleScriptInjectionPrevention:
             assert '\\"' in script_arg
 
         # Test line breaks are escaped
-        with patch.object(runner, 'run', new_callable=AsyncMock) as mock_run:
+        with patch.object(runner, "run", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = "success"
-            await runner.set_clipboard('text\nevil injection')
+            await runner.set_clipboard("text\nevil injection")
             script_arg = mock_run.call_args[0][0]
             # Newlines should be escaped
-            assert '\\n' in script_arg
+            assert "\\n" in script_arg
 
 
 # =============================================================================
@@ -529,12 +529,7 @@ class TestPIIRedaction:
     def test_redact_multiple_pii_types(self) -> None:
         """Test redacting multiple PII types in one text."""
         gateway = PrivacyGateway()
-        text = (
-            "Email: john@example.com, "
-            "Phone: 555-123-4567, "
-            "SSN: 123-45-6789, "
-            "IP: 192.168.1.1"
-        )
+        text = "Email: john@example.com, Phone: 555-123-4567, SSN: 123-45-6789, IP: 192.168.1.1"
 
         result = gateway.redact(text)
 
@@ -598,6 +593,7 @@ class TestPIIRedaction:
         """Test removing a PII pattern."""
         # Save original patterns to restore after test
         from roxy.brain.privacy import PrivacyGateway
+
         original_patterns = PrivacyGateway.PATTERNS.copy()
 
         gateway = PrivacyGateway()

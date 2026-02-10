@@ -8,10 +8,10 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import wraps
-from typing import Any, Callable, Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,9 @@ class _HookRegistry:
         """
         key = (skill_name, hook_type)
         self._hooks[key].append(hook_fn)
-        logger.debug(f"Registered {hook_type.value} hook for skill '{skill_name}': {hook_fn.__name__}")
+        logger.debug(
+            f"Registered {hook_type.value} hook for skill '{skill_name}': {hook_fn.__name__}"
+        )
 
     def get_hooks(self, skill_name: str, hook_type: HookType) -> list[HookFunction]:
         """Get all hooks for a specific skill and hook type.
@@ -120,10 +122,10 @@ class SkillContext:
     user_input: str
     intent: str
     parameters: dict[str, Any]
-    memory: "MemoryManager"
-    config: "RoxyConfig"
+    memory: MemoryManager
+    config: RoxyConfig
     conversation_history: list[dict] = field(default_factory=list)
-    local_llm_client: "LLMClient | None" = None
+    local_llm_client: LLMClient | None = None
 
     # Hook execution metadata (populated during execution)
     skill_name: str | None = None
@@ -255,10 +257,7 @@ class StubMemoryManager:
     async def search_history(self, query: str, limit: int = 5) -> list[dict]:
         """Simple keyword search over history."""
         query_lower = query.lower()
-        results = [
-            entry for entry in self._history
-            if query_lower in str(entry).lower()
-        ]
+        results = [entry for entry in self._history if query_lower in str(entry).lower()]
         return results[:limit]
 
     async def remember(self, key: str, value: str) -> None:
@@ -270,7 +269,8 @@ class StubMemoryManager:
         """Recall facts matching query."""
         query_lower = query.lower()
         results = [
-            value for key, value in self._longterm.items()
+            value
+            for key, value in self._longterm.items()
             if query_lower in key.lower() or query_lower in value.lower()
         ]
         return results
@@ -488,6 +488,7 @@ def register_hook(
         def track_all_skill_executions(skill_name: str, context: SkillContext) -> None:
             metrics.track_skill_execution(skill_name)
     """
+
     def decorator(fn: HookFunction) -> HookFunction:
         _hook_registry.register(skill_name, hook_type, fn)
         return fn

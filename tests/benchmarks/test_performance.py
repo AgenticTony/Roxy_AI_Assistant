@@ -5,17 +5,16 @@ Tests that performance targets from docs/performance.md are met.
 
 from __future__ import annotations
 
-import pytest
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from roxy.config import RoxyConfig
-from roxy.brain.orchestrator import RoxyOrchestrator
-from roxy.brain.llm_clients import OllamaClient
-from roxy.skills.registry import SkillRegistry
-from roxy.skills.base import SkillContext, SkillResult
-from roxy.memory.manager import MemoryManager
+import pytest
 
+from roxy.brain.orchestrator import RoxyOrchestrator
+from roxy.config import RoxyConfig
+from roxy.memory.manager import MemoryManager
+from roxy.skills.base import SkillContext
+from roxy.skills.registry import SkillRegistry
 
 # Performance targets (in milliseconds)
 TARGET_WAKE_WORD_DETECTION = 200
@@ -60,7 +59,7 @@ async def test_skill_find_performance(mock_config: RoxyConfig) -> None:
     avg_time = sum(times) / len(times)
     max_time = max(times)
 
-    print(f"\nSkill Find Performance:")
+    print("\nSkill Find Performance:")
     print(f"  Average: {avg_time:.2f}ms")
     print(f"  Max: {max_time:.2f}ms")
     print(f"  Target: <{TARGET_INTENT_CLASSIFICATION}ms")
@@ -106,7 +105,7 @@ async def test_skill_execution_performance(mock_config: RoxyConfig) -> None:
         avg_time = sum(times) / len(times)
         max_time = max(times)
 
-        print(f"\nSkill Execution Performance:")
+        print("\nSkill Execution Performance:")
         print(f"  Average: {avg_time:.2f}ms")
         print(f"  Max: {max_time:.2f}ms")
         print(f"  Target: <{TARGET_SKILL_EXECUTION}ms")
@@ -140,7 +139,7 @@ async def test_memory_search_performance(mock_config: RoxyConfig) -> None:
 
     avg_time = sum(times) / len(times)
 
-    print(f"\nMemory Search Performance:")
+    print("\nMemory Search Performance:")
     print(f"  Average: {avg_time:.2f}ms")
     print(f"  Target: <{TARGET_MEMORY_SEARCH}ms")
 
@@ -183,7 +182,7 @@ async def test_orchestrator_throughput(mock_config: RoxyConfig) -> None:
         elapsed = time.time() - start
         requests_per_second = num_requests / elapsed
 
-        print(f"\nOrchestrator Throughput:")
+        print("\nOrchestrator Throughput:")
         print(f"  Requests: {num_requests}")
         print(f"  Time: {elapsed:.2f}s")
         print(f"  Throughput: {requests_per_second:.2f} req/s")
@@ -219,7 +218,7 @@ async def test_timing_stats_collection(mock_config: RoxyConfig) -> None:
         stats = await orchestrator.get_statistics()
         timing_stats = stats.get("timing_stats", {})
 
-        print(f"\nTiming Statistics:")
+        print("\nTiming Statistics:")
         for operation, metrics in timing_stats.items():
             print(f"  {operation}:")
             print(f"    Avg: {metrics['avg']:.2f}ms")
@@ -265,16 +264,13 @@ async def test_concurrent_performance(mock_config: RoxyConfig) -> None:
         num_concurrent = 5
         start = time.time()
 
-        tasks = [
-            orchestrator.process(f"Concurrent message {i}")
-            for i in range(num_concurrent)
-        ]
+        tasks = [orchestrator.process(f"Concurrent message {i}") for i in range(num_concurrent)]
 
         results = await asyncio.gather(*tasks)
 
         elapsed = time.time() - start
 
-        print(f"\nConcurrent Performance:")
+        print("\nConcurrent Performance:")
         print(f"  Concurrent requests: {num_concurrent}")
         print(f"  Total time: {elapsed:.2f}s")
         print(f"  Per request: {elapsed / num_concurrent:.2f}s")
@@ -290,7 +286,6 @@ async def test_concurrent_performance(mock_config: RoxyConfig) -> None:
 async def test_memory_usage_stability(mock_config: RoxyConfig) -> None:
     """Test that memory usage remains stable over many requests."""
     import gc
-    import sys
 
     registry = SkillRegistry()
     registry.reset()
@@ -326,7 +321,7 @@ async def test_memory_usage_stability(mock_config: RoxyConfig) -> None:
         final_objects = len(gc.get_objects())
         total_growth = final_objects - initial_objects
 
-        print(f"\nMemory Usage:")
+        print("\nMemory Usage:")
         print(f"  Initial objects: {initial_objects}")
         print(f"  Final objects: {final_objects}")
         print(f"  Growth: {total_growth}")

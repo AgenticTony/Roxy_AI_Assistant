@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Awaitable, Callable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 from roxy.config import VoiceConfig
 
@@ -46,7 +46,7 @@ class VoicePipeline:
 
     def __init__(
         self,
-        orchestrator: "RoxyOrchestrator",
+        orchestrator: RoxyOrchestrator,
         config: VoiceConfig,
     ) -> None:
         """Initialize the voice pipeline.
@@ -199,7 +199,9 @@ class VoicePipeline:
             # Speak error message if possible
             try:
                 if self.config.speak_responses:
-                    await self._tts.speak("I'm sorry, I encountered an error processing your request.")
+                    await self._tts.speak(
+                        "I'm sorry, I encountered an error processing your request."
+                    )
             except Exception:
                 pass
 
@@ -280,7 +282,7 @@ class VoicePipeline:
 
 
 async def create_voice_pipeline(
-    orchestrator: "RoxyOrchestrator",
+    orchestrator: RoxyOrchestrator,
     config: VoiceConfig,
 ) -> VoicePipeline:
     """

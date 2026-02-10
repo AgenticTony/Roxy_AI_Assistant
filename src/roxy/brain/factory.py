@@ -11,12 +11,12 @@ import logging
 from pathlib import Path
 
 from ..config import RoxyConfig
-from ..skills.registry import SkillRegistry
 from ..memory import MemoryManager
+from ..skills.registry import SkillRegistry
+from .llm_clients import CloudLLMClient, OllamaClient
 from .orchestrator import RoxyOrchestrator
-from .llm_clients import OllamaClient, CloudLLMClient
 from .privacy import PrivacyGateway
-from .rate_limiter import RateLimiter, RateLimitConfig
+from .rate_limiter import RateLimitConfig, RateLimiter
 from .router import ConfidenceRouter
 
 logger = logging.getLogger(__name__)
@@ -88,7 +88,9 @@ async def create_orchestrator(
         privacy=privacy,
         confidence_threshold=config.llm_cloud.confidence_threshold,
     )
-    logger.debug(f"Created confidence router with threshold: {config.llm_cloud.confidence_threshold}")
+    logger.debug(
+        f"Created confidence router with threshold: {config.llm_cloud.confidence_threshold}"
+    )
 
     # Create memory manager
     memory = MemoryManager(

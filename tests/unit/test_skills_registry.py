@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
-from roxy.skills.registry import SkillRegistry, get_registry
 from roxy.skills.permissions import PermissionManager, get_permission_manager
+from roxy.skills.registry import SkillRegistry, get_registry
 
 
 class MockSkill(RoxySkill):
@@ -151,6 +151,7 @@ class TestPermissionManager:
 
     def test_check_no_permissions_required(self):
         """Test checking skill with no permissions required."""
+
         class NoPermsSkill(RoxySkill):
             name = "no_perms"
             description = "Skill with no permissions"

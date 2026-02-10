@@ -6,10 +6,11 @@ Tests the integration between Roxy skills and Agno function calling.
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
-from roxy.brain.tool_adapter import SkillToolAdapter, IntentClassifier
-from roxy.skills.base import RoxySkill, SkillContext, SkillResult, Permission
+from roxy.brain.tool_adapter import IntentClassifier, SkillToolAdapter
+from roxy.skills.base import Permission, RoxySkill, SkillContext, SkillResult
 from roxy.skills.registry import SkillRegistry
 
 
@@ -205,7 +206,11 @@ class TestIntentClassifier:
         client = MagicMock()
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = '{"intent": "app_launcher", "confidence": 0.9, "parameters": {"app_name": "Safari"}}'
+        mock_response.choices[
+            0
+        ].message.content = (
+            '{"intent": "app_launcher", "confidence": 0.9, "parameters": {"app_name": "Safari"}}'
+        )
         client._client.chat.completions.create = AsyncMock(return_value=mock_response)
         return client
 
@@ -233,7 +238,7 @@ class TestIntentClassifier:
 
     def test_get_all_skills_info(self, classifier):
         """Test getting skill descriptions."""
-        with patch.object(SkillRegistry, 'get_instance') as mock_get:
+        with patch.object(SkillRegistry, "get_instance") as mock_get:
             mock_registry = MagicMock()
             mock_registry.list_skills.return_value = [
                 {
@@ -277,9 +282,7 @@ class TestIntentClassifier:
     @pytest.mark.asyncio
     async def test_classify_api_error(self, classifier, mock_client):
         """Test classification with API error."""
-        mock_client._client.chat.completions.create = AsyncMock(
-            side_effect=Exception("API Error")
-        )
+        mock_client._client.chat.completions.create = AsyncMock(side_effect=Exception("API Error"))
 
         result = await classifier.classify("test input")
 
@@ -294,7 +297,9 @@ class TestIntentClassifier:
         # Return confidence > 1
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = '{"intent": "test", "confidence": 1.5, "parameters": {}}'
+        mock_response.choices[
+            0
+        ].message.content = '{"intent": "test", "confidence": 1.5, "parameters": {}}'
         mock_client._client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         result = await classifier.classify("test")
@@ -307,7 +312,9 @@ class TestIntentClassifier:
         # Return confidence < 0
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = '{"intent": "test", "confidence": -0.5, "parameters": {}}'
+        mock_response.choices[
+            0
+        ].message.content = '{"intent": "test", "confidence": -0.5, "parameters": {}}'
         mock_client._client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         result = await classifier.classify("test")
@@ -319,7 +326,11 @@ class TestIntentClassifier:
         """Test classification with extra text around JSON."""
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = 'Here is the result: {"intent": "test", "confidence": 0.7, "parameters": {}}'
+        mock_response.choices[
+            0
+        ].message.content = (
+            'Here is the result: {"intent": "test", "confidence": 0.7, "parameters": {}}'
+        )
         mock_client._client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         result = await classifier.classify("test")
@@ -363,8 +374,8 @@ class TestSkillCallStats:
 
     def test_circuit_breaker_trips_on_consecutive_failures(self):
         """Test that circuit breaker trips after 5 consecutive failures."""
+
         from roxy.brain.tool_adapter import SkillCallStats
-        from datetime import datetime, timedelta
 
         stats = SkillCallStats()
         stats.total_calls = 10
@@ -375,8 +386,9 @@ class TestSkillCallStats:
 
     def test_circuit_breaker_trips_on_high_failure_rate(self):
         """Test that circuit breaker trips on high failure rate."""
-        from roxy.brain.tool_adapter import SkillCallStats
         from datetime import datetime, timedelta
+
+        from roxy.brain.tool_adapter import SkillCallStats
 
         stats = SkillCallStats()
         stats.total_calls = 10
@@ -429,6 +441,7 @@ class TestHardenedSkillToolAdapter:
 
     def test_skill_name_validation_raises_on_invalid_name(self, adapter):
         """Test that invalid skill names raise ValueError."""
+
         # Create a valid skill then modify name to be invalid
         # (can't create with invalid name directly due to RoxySkill.__init__ validation)
         class InvalidSkill(RoxySkill):
@@ -473,6 +486,7 @@ class TestHardenedSkillToolAdapter:
     @pytest.mark.asyncio
     async def test_circuit_breaker_disables_failing_skill(self, adapter, mock_orchestrator):
         """Test that circuit breaker disables skills after repeated failures."""
+
         class FailingSkill(RoxySkill):
             name = "failing"
             description = "A skill that always fails"
@@ -497,6 +511,7 @@ class TestHardenedSkillToolAdapter:
     @pytest.mark.asyncio
     async def test_circuit_breaker_allows_manual_reset(self, adapter, mock_orchestrator):
         """Test that skills can be manually re-enabled after circuit breaker trip."""
+
         class FailingSkill(RoxySkill):
             name = "temporarily_broken"
             description = "A skill that temporarily fails"
@@ -563,6 +578,7 @@ class TestHardenedSkillToolAdapter:
     @pytest.mark.asyncio
     async def test_unhealthy_skills_excluded_from_tools(self, adapter, mock_orchestrator):
         """Test that unhealthy skills are not included in tool list."""
+
         class FlakySkill(RoxySkill):
             name = "flaky"
             description = "A skill that often fails"
@@ -621,7 +637,6 @@ class TestHardenedIntentClassifier:
     @pytest.mark.asyncio
     async def test_extract_json_from_code_block(self, classifier):
         """Test JSON extraction from markdown code blocks."""
-        from roxy.brain.tool_adapter import IntentClassifier
 
         # Test with code block
         content = '```json\n{"intent": "test", "confidence": 0.8}\n```'
@@ -634,7 +649,6 @@ class TestHardenedIntentClassifier:
     @pytest.mark.asyncio
     async def test_extract_json_from_nested_content(self, classifier):
         """Test JSON extraction from content with nested braces."""
-        from roxy.brain.tool_adapter import IntentClassifier
 
         # Test with extra text before JSON
         content = 'Here is the result: {"intent": "app_launcher", "confidence": 0.9, "parameters": {"app_name": "Safari"}}'
@@ -646,7 +660,6 @@ class TestHardenedIntentClassifier:
     @pytest.mark.asyncio
     async def test_extract_json_with_multiple_brace_levels(self, classifier):
         """Test JSON extraction from deeply nested JSON."""
-        from roxy.brain.tool_adapter import IntentClassifier
 
         # Test with nested JSON (2 levels of braces)
         content = '{"intent": "test", "parameters": {"nested": {"value": 5}}}'
@@ -658,7 +671,6 @@ class TestHardenedIntentClassifier:
     @pytest.mark.asyncio
     async def test_extract_json_returns_none_on_invalid(self, classifier):
         """Test that _extract_json returns None for invalid JSON."""
-        from roxy.brain.tool_adapter import IntentClassifier
 
         result = classifier._extract_json("This is definitely not JSON content")
         assert result is None

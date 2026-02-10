@@ -7,8 +7,8 @@ displaying status, and accessing settings.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,9 @@ class RoxyMenuBar:
         self._command_item = rumps.MenuItem("Command: (idle)")
 
         # Action menu items
-        self._listening_item = rumps.MenuItem("Start Listening", callback=self._on_listening_clicked)
+        self._listening_item = rumps.MenuItem(
+            "Start Listening", callback=self._on_listening_clicked
+        )
         self._settings_item = rumps.MenuItem("Settings...", callback=self._on_settings_clicked)
         self._memory_item = rumps.MenuItem("Memory View...", callback=self._on_memory_clicked)
 

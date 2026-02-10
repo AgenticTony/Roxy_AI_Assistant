@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 # Try to import aiohttp for HTTP health checks
 try:
     import aiohttp
+
     HAS_AIOHTTP = True
 except ImportError:
     HAS_AIOHTTP = False
@@ -75,7 +76,7 @@ class ServerHealthChecker:
                 return await ServerHealthChecker._check_with_aiohttp(connection)
             else:
                 return await ServerHealthChecker._check_with_socket(connection)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(f"Health check timed out for {connection.name}")
             return False
         except Exception as e:
@@ -99,9 +100,7 @@ class ServerHealthChecker:
                     logger.debug(f"Health check passed for {connection.name}: {response.status}")
                     return True
                 else:
-                    logger.warning(
-                        f"Health check failed for {connection.name}: {response.status}"
-                    )
+                    logger.warning(f"Health check failed for {connection.name}: {response.status}")
                     return False
 
     @staticmethod

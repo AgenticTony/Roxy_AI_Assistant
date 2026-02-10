@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -51,7 +50,7 @@ class TestAppleScriptRunner:
         mock_subprocess.return_value = mock_process
 
         runner = AppleScriptRunner()
-        result = await runner.run("tell application \"System Events\" to return \"test\"")
+        result = await runner.run('tell application "System Events" to return "test"')
 
         assert result == "test output"
 
@@ -94,10 +93,12 @@ class TestAppleScriptRunner:
         """Test getting running applications."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(
-            b'[{"name":"Finder","bundleID":"com.apple.finder","frontmost":true}]',
-            b""
-        ))
+        mock_process.communicate = AsyncMock(
+            return_value=(
+                b'[{"name":"Finder","bundleID":"com.apple.finder","frontmost":true}]',
+                b"",
+            )
+        )
 
         mock_subprocess.return_value = mock_process
         runner = AppleScriptRunner()
@@ -197,10 +198,9 @@ class TestAppleScriptRunner:
         """Test getting today's calendar events."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
-        mock_process.communicate = AsyncMock(return_value=(
-            b'[{"summary":"Test Event","startDate":"2024-01-01T10:00:00"}]',
-            b""
-        ))
+        mock_process.communicate = AsyncMock(
+            return_value=(b'[{"summary":"Test Event","startDate":"2024-01-01T10:00:00"}]', b"")
+        )
 
         mock_subprocess.return_value = mock_process
         runner = AppleScriptRunner()

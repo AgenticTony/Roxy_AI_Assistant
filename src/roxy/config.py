@@ -61,12 +61,14 @@ def _get_secret(keyring_service: str, keyring_username: str, env_var: str) -> st
 
 class CloudProvider(str, Enum):
     """Supported cloud LLM providers."""
+
     ZAI = "zai"
     OPENROUTER = "openrouter"
 
 
 class ConsentMode(str, Enum):
     """User consent modes for cloud LLM access."""
+
     ASK = "ask"
     ALWAYS = "always"
     NEVER = "never"
@@ -126,7 +128,7 @@ class CloudLLMConfig(BaseModel):
         )
 
     @model_validator(mode="after")
-    def set_default_base_url(self) -> "CloudLLMConfig":
+    def set_default_base_url(self) -> CloudLLMConfig:
         """Set default base URL based on provider."""
         if not self.base_url:
             if self.provider == CloudProvider.ZAI:
@@ -300,7 +302,7 @@ class RoxyConfig(BaseSettings):
         return v.upper()
 
     @model_validator(mode="after")
-    def expand_data_dir(self) -> "RoxyConfig":
+    def expand_data_dir(self) -> RoxyConfig:
         """Expand user home directory in data_dir."""
         self.data_dir = str(Path(self.data_dir).expanduser())
         return self
@@ -310,7 +312,7 @@ class RoxyConfig(BaseSettings):
         cls,
         yaml_path: Path | str | None = None,
         env_file: str | None = ".env",
-    ) -> "RoxyConfig":
+    ) -> RoxyConfig:
         """
         Load configuration from YAML and environment.
 
@@ -397,7 +399,9 @@ class RoxyConfig(BaseSettings):
             return {}
 
     @classmethod
-    def _flatten_dict(cls, data: dict[str, Any], parent_key: str = "", sep: str = "_") -> dict[str, Any]:
+    def _flatten_dict(
+        cls, data: dict[str, Any], parent_key: str = "", sep: str = "_"
+    ) -> dict[str, Any]:
         """
         Flatten nested dictionary for pydantic-settings.
 
@@ -452,9 +456,9 @@ class RoxyConfig(BaseSettings):
         nested_model_fields = {
             "llm_local",  # LocalLLMConfig
             "llm_cloud",  # CloudLLMConfig
-            "privacy",    # PrivacyConfig
-            "memory",     # MemoryConfig
-            "voice",      # VoiceConfig
+            "privacy",  # PrivacyConfig
+            "memory",  # MemoryConfig
+            "voice",  # VoiceConfig
         }
 
         # Fields that are simple sub-fields within nested models
@@ -471,7 +475,7 @@ class RoxyConfig(BaseSettings):
         for flat_key, value in flat_data.items():
             # Check if this is a privacy config field
             if flat_key.startswith("privacy_"):
-                field_name = flat_key[len("privacy_"):]
+                field_name = flat_key[len("privacy_") :]
                 if "privacy" not in result:
                     result["privacy"] = {}
                 result["privacy"][field_name] = value
@@ -479,7 +483,7 @@ class RoxyConfig(BaseSettings):
 
             # Check if this is an llm_local field
             if flat_key.startswith("llm_local_"):
-                field_name = flat_key[len("llm_local_"):]
+                field_name = flat_key[len("llm_local_") :]
                 if "llm_local" not in result:
                     result["llm_local"] = {}
                 result["llm_local"][field_name] = value
@@ -487,7 +491,7 @@ class RoxyConfig(BaseSettings):
 
             # Check if this is an llm_cloud field
             if flat_key.startswith("llm_cloud_"):
-                field_name = flat_key[len("llm_cloud_"):]
+                field_name = flat_key[len("llm_cloud_") :]
                 if "llm_cloud" not in result:
                     result["llm_cloud"] = {}
                 result["llm_cloud"][field_name] = value
@@ -495,14 +499,14 @@ class RoxyConfig(BaseSettings):
 
             # Check if this is a memory field
             if flat_key.startswith("memory_"):
-                field_name = flat_key[len("memory_"):]
+                field_name = flat_key[len("memory_") :]
                 if "memory" not in result:
                     result["memory"] = {}
                 # Handle mem0_config nested fields
                 if field_name.startswith("mem0_"):
                     if "mem0_config" not in result["memory"]:
                         result["memory"]["mem0_config"] = {}
-                    sub_field = field_name[len("mem0_"):]
+                    sub_field = field_name[len("mem0_") :]
                     result["memory"]["mem0_config"][sub_field] = value
                 else:
                     result["memory"][field_name] = value
@@ -510,7 +514,7 @@ class RoxyConfig(BaseSettings):
 
             # Check if this is a voice field
             if flat_key.startswith("voice_"):
-                field_name = flat_key[len("voice_"):]
+                field_name = flat_key[len("voice_") :]
                 if "voice" not in result:
                     result["voice"] = {}
                 result["voice"][field_name] = value
