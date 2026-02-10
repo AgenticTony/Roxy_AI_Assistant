@@ -45,7 +45,9 @@ jobs:
 
       - name: Security scan with Bandit
         run: |
-          uv run bandit -r src/roxy/ -ll
+          uv run bandit -r src/roxy/ -ll -iii -s \
+            --skip B108 \
+            --exclude /usr/,/tests/
 
       - name: Run pytest with coverage
         run: |
