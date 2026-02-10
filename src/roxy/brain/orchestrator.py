@@ -2,37 +2,39 @@
 
 Orchestrates LLM interactions, skill dispatch, and memory management.
 """
+# pylint: disable=too-many-instance-attributes,too-many-arguments
+# pylint: disable=too-many-positional-arguments,too-many-locals
+# pylint: disable=too-many-statements,broad-exception-caught
+# pylint: disable=protected-access
 
 from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
-from agno.agent.agent import Agent
-from agno.models.openai.chat import OpenAIChat
+# pylint: disable=import-error
+from agno.agent.agent import Agent  # noqa: I001
+from agno.models.openai.chat import OpenAIChat  # noqa: I001
 
 from ..config import RoxyConfig
-from ..skills.base import (
-    SkillContext,
-    SkillResult,
-    RoxySkill,
-    Permission,
-)
-from ..skills.registry import SkillRegistry
 from ..memory import MemoryManager
-from .llm_clients import OllamaClient, CloudLLMClient, LLMResponse
-from .privacy import PrivacyGateway, ConsentMode
-from .router import ConfidenceRouter
+from ..skills.base import RoxySkill, SkillContext, SkillResult
+from ..skills.registry import SkillRegistry
+from .llm_clients import CloudLLMClient, OllamaClient
+from .privacy import PrivacyGateway
 from .protocols import (
-    PrivacyGatewayProtocol,
-    LocalLLMClientProtocol,
     CloudLLMClientProtocol,
     ConfidenceRouterProtocol,
+    LocalLLMClientProtocol,
     MemoryManagerProtocol,
+    PrivacyGatewayProtocol,
     SkillRegistryProtocol,
 )
+from .router import ConfidenceRouter
+from .tool_adapter import IntentClassifier, SkillToolAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +128,19 @@ class RoxyOrchestrator:
             ollama_host=config.llm_local.host,
         )
 
-        # Agno agent (will be enhanced with tools/skills later)
+        # Initialize tool adapter for function calling
+        self.tool_adapter = SkillToolAdapter(
+            skill_registry=self.skill_registry,
+            orchestrator_context=self,
+        )
+
+        # Initialize intent classifier for fast classification
+        self.intent_classifier = IntentClassifier(
+            local_client=self.local_client,
+            model=config.llm_local.router_model,
+        )
+
+        # Agno agent with function calling support
         self.agent = self._create_agent()
 
         # Conversation state
@@ -138,10 +152,10 @@ class RoxyOrchestrator:
         logger.info("Roxy orchestrator initialized")
 
     def _create_agent(self) -> Agent:
-        """Create the Agno agent with appropriate model.
+        """Create the Agno agent with appropriate model and tools.
 
         Returns:
-            Configured Agno Agent instance.
+            Configured Agno Agent instance with registered skill tools.
         """
         # Create OpenAIChat model pointing to Ollama
         model = OpenAIChat(
@@ -150,12 +164,18 @@ class RoxyOrchestrator:
             api_key="ollama",  # Ollama doesn't require a key
         )
 
-        # Create agent
+        # Get all skill tools for function calling
+        tools = self.tool_adapter.get_all_tools()
+
+        # Create agent with tools
         agent = Agent(
             name=self.config.name,
             model=model,
             instructions=[self._get_system_prompt()],
+            tools=tools,  # Register skills as Agno tools
         )
+
+        logger.info("Created Agno agent with %s skill tools", len(tools))
 
         return agent
 
@@ -198,14 +218,15 @@ When responding:
 
     async def process(self, user_input: str) -> str:
         """
-        Main processing pipeline for user input.
+        Main processing pipeline for user input with Agno function calling.
 
         This implements the following flow:
-        1. Try to match a skill from the registry
-        2. If skill matches with sufficient confidence, execute it
-        3. Otherwise, fall through to LLM processing
-        4. Store interaction in memory
-        5. Update conversation history
+        1. Use intent classifier for fast pre-processing
+        2. Send request to Agno agent with all skill tools available
+        3. If LLM returns a tool_call → execute the corresponding skill
+        4. If LLM returns text response (no tool call) → use as general conversation
+        5. Store interaction in memory
+        6. Update conversation history
 
         Args:
             user_input: The user's input text.
@@ -213,7 +234,7 @@ When responding:
         Returns:
             Response text to display/speak to user.
         """
-        logger.info(f"Processing user input: {user_input[:100]}...")
+        logger.info("Processing user input: %s...", user_input[:100])
         start_time = time.time()
 
         try:
@@ -223,96 +244,137 @@ When responding:
             memory_elapsed = (time.time() - memory_start) * 1000
             self._track_timing("memory_context_build", memory_elapsed)
 
-            # Try to find a matching skill
-            skill_find_start = time.time()
-            skill, skill_confidence = self.skill_registry.find_skill(
-                intent=user_input,
-                parameters={},  # Parameters will be extracted by skill if needed
+            # Fast intent classification with the router model
+            classify_start = time.time()
+            classification = await self.intent_classifier.classify(user_input)
+            classify_elapsed = (time.time() - classify_start) * 1000
+            self._track_timing("intent_classification", classify_elapsed)
+
+            logger.debug(
+                "Intent: %s (confidence: %.2f)",
+                classification['intent'],
+                classification['confidence']
             )
-            skill_find_elapsed = (time.time() - skill_find_start) * 1000
-            self._track_timing("skill_find", skill_find_elapsed)
 
             response_text: str
 
-            # If we found a skill with good confidence, use it
-            skill_threshold = 0.5  # Minimum confidence for skill dispatch
-            if skill and skill_confidence >= skill_threshold:
-                logger.info(f"Using skill: {skill.name} (confidence: {skill_confidence:.2f})")
-                skill_start = time.time()
+            # Check if intent confidence is high enough for direct skill dispatch
+            # (bypassing full LLM function calling for obvious commands)
+            if classification['confidence'] >= 0.8:
+                intent = classification['intent']
+                if intent != 'general_conversation':
+                    # Direct skill dispatch for high-confidence matches
+                    skill = self.skill_registry.get_skill(intent)
+                    if skill:
+                        logger.info("Direct skill dispatch: %s", intent)
+                        skill_start = time.time()
 
-                # Create skill context with all dependencies
-                context = SkillContext(
-                    user_input=user_input,
-                    intent=user_input,  # Use full input as intent for skill
-                    parameters={},  # Skills will extract their own parameters
-                    memory=self.memory,
-                    config=self.config,
+                        # Create skill context with classified parameters
+                        context = SkillContext(
+                            user_input=user_input,
+                            intent=classification['intent'],
+                            parameters=classification['parameters'],
+                            memory=self.memory,
+                            config=self.config,
+                            conversation_history=self.conversation_history.copy(),
+                            local_llm_client=self.local_client,
+                        )
+
+                        # Inject privacy gateway if needed
+                        if hasattr(skill, 'privacy_gateway') and skill.privacy_gateway is None:
+                            skill.privacy_gateway = self.privacy
+
+                        # Execute the skill
+                        result: SkillResult = await skill._execute_with_hooks(context)
+
+                        skill_elapsed = (time.time() - skill_start) * 1000
+                        self._track_timing("skill_execution", skill_elapsed)
+
+                        response_text = result.response_text
+
+                        # Store interaction and continue
+                        await self._store_interaction(user_input, response_text)
+                        self._update_conversation_history(user_input, response_text)
+                        self._trim_history()
+
+                        elapsed = (time.time() - start_time) * 1000
+                        self._track_timing("process_total", elapsed)
+                        logger.debug("Processed in %.0fms (direct dispatch)", elapsed)
+
+                        return response_text
+
+            # Use Agno agent with function calling for complex/ambiguous requests
+            logger.debug("Using Agno agent with function calling")
+            agent_start = time.time()
+
+            # Prepare messages for the agent
+            messages = [{"role": "user", "content": user_input}]
+
+            # Add conversation history for context
+            if self.conversation_history:
+                messages = self.conversation_history + messages
+
+            # Run the agent - it will automatically decide whether to use tools
+            try:
+                # Agno's Agent.run() handles tool calling internally
+                response = await self.agent.arun(
+                    input=user_input,
                     conversation_history=self.conversation_history.copy(),
-                    local_llm_client=self.local_client,
                 )
 
-                # Inject privacy gateway into skills that need it
-                if hasattr(skill, 'privacy_gateway') and skill.privacy_gateway is None:
-                    skill.privacy_gateway = self.privacy
+                # Extract the response content
+                if hasattr(response, 'content'):
+                    response_text = response.content
+                elif isinstance(response, str):
+                    response_text = response
+                else:
+                    response_text = str(response)
 
-                # Execute the skill with lifecycle hooks
-                result: SkillResult = await skill._execute_with_hooks(context)
-
-                skill_elapsed = (time.time() - skill_start) * 1000
-                self._track_timing("skill_execution", skill_elapsed)
-                logger.debug(f"Skill executed in {skill_elapsed:.0f}ms")
-
-                response_text = result.response_text
-
-                # Store interaction in memory
-                store_start = time.time()
-                await self._store_interaction(user_input, response_text)
-                store_elapsed = (time.time() - store_start) * 1000
-                self._track_timing("memory_store", store_elapsed)
-
-            else:
-                # No skill matched - use LLM processing
-                logger.debug(f"No matching skill (best: {skill.name if skill else 'None'} @ {skill_confidence:.2f}), using LLM")
-
-                # Route to appropriate LLM (local or cloud based on confidence)
-                llm_start = time.time()
+            except Exception as agent_error:
+                logger.error("Agno agent error: %s", agent_error)
+                # Fall back to direct LLM routing
+                logger.info("Falling back to direct LLM routing")
                 llm_response = await self.router.route(user_input)
-                llm_elapsed = (time.time() - llm_start) * 1000
-                self._track_timing("llm_generate", llm_elapsed)
-
-                # Track local vs cloud specifically
-                provider = "local" if llm_response.provider == "local" else "cloud"
-                self._track_timing(f"llm_{provider}", llm_elapsed)
-
                 response_text = llm_response.content
 
-                # Store interaction in memory
-                store_start = time.time()
-                await self._store_interaction(user_input, response_text)
-                store_elapsed = (time.time() - store_start) * 1000
-                self._track_timing("memory_store", store_elapsed)
+            agent_elapsed = (time.time() - agent_start) * 1000
+            self._track_timing("agent_execution", agent_elapsed)
+
+            # Store interaction in memory
+            store_start = time.time()
+            await self._store_interaction(user_input, response_text)
+            store_elapsed = (time.time() - store_start) * 1000
+            self._track_timing("memory_store", store_elapsed)
 
             # Update conversation history
-            self.conversation_history.append({"role": "user", "content": user_input})
-            self.conversation_history.append({"role": "assistant", "content": response_text})
-
-            # Trim history if needed
-            trim_start = time.time()
-            max_history = self.config.memory.session_max_messages
-            if len(self.conversation_history) > max_history:
-                self.conversation_history = self.conversation_history[-max_history:]
-            trim_elapsed = (time.time() - trim_start) * 1000
-            self._track_timing("history_trim", trim_elapsed)
+            self._update_conversation_history(user_input, response_text)
+            self._trim_history()
 
             elapsed = (time.time() - start_time) * 1000
             self._track_timing("process_total", elapsed)
-            logger.debug(f"Processed in {elapsed:.0f}ms")
+            logger.debug("Processed in %.0fms (function calling)", elapsed)
 
             return response_text
 
         except Exception as e:
-            logger.error(f"Error processing user input: {e}", exc_info=True)
+            logger.error("Error processing user input: %s", e, exc_info=True)
             return f"I'm sorry, I encountered an error: {str(e)}"
+
+    def _update_conversation_history(self, user_input: str, response: str) -> None:
+        """Update conversation history with new messages.
+
+        Args:
+            user_input: User's input text.
+            response: Assistant's response text.
+        """
+        self.conversation_history.append({"role": "user", "content": user_input})
+        self.conversation_history.append({"role": "assistant", "content": response})
+
+    def _trim_history(self) -> None:
+        """Trim conversation history to max size."""
+        max_history = self.config.memory.session_max_messages
+        if len(self.conversation_history) > max_history:
+            self.conversation_history = self.conversation_history[-max_history:]
 
     def _track_timing(self, operation: str, duration_ms: float) -> None:
         """Track timing for performance monitoring.
@@ -367,7 +429,7 @@ When responding:
             await self._extract_and_store_facts(user_input)
 
         except Exception as e:
-            logger.error(f"Error storing interaction: {e}")
+            logger.error("Error storing interaction: %s", e)
 
     async def _extract_and_store_facts(self, text: str) -> None:
         """
@@ -399,7 +461,7 @@ When responding:
 
                 if fact:
                     await self.memory.remember(key, fact)
-                    logger.debug(f"Stored fact: {key} = {fact}")
+                    logger.debug("Stored fact: %s = %s", key, fact)
 
     def _get_timestamp(self) -> str:
         """Get current timestamp as ISO string.
@@ -407,7 +469,6 @@ When responding:
         Returns:
             ISO format timestamp.
         """
-        from datetime import datetime
         return datetime.now().isoformat()
 
     def register_skill(self, skill: RoxySkill) -> None:
@@ -430,7 +491,7 @@ When responding:
         # implementation uses the skill registry for dispatch which
         # provides more control over skill execution and lifecycle.
 
-        logger.info(f"Registered skill: {skill.name}")
+        logger.info("Registered skill: %s", skill.name)
 
     async def get_memory(self, query: str, limit: int = 5) -> list[str]:
         """

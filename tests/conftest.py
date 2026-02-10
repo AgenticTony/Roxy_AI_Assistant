@@ -1,16 +1,17 @@
 """Shared pytest fixtures for Roxy tests."""
+# pylint: disable=redefined-outer-name
 
 from __future__ import annotations
 
-import asyncio
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 import httpx
+import pytest
 
-from roxy.config import RoxyConfig, LocalLLMConfig, CloudLLMConfig, PrivacyConfig
+from roxy.brain.llm_clients import OllamaClient
+from roxy.config import CloudLLMConfig, LocalLLMConfig, PrivacyConfig, RoxyConfig
 
 
 @pytest.fixture
@@ -123,9 +124,11 @@ def mock_openai_client(mock_ollama_response: dict) -> MagicMock:
     # Mock chat completions
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
-    mock_response.choices[0].message.content = mock_ollama_response["choices"][0]["message"]["content"]
+    msg_content = mock_ollama_response["choices"][0]["message"]["content"]
+    mock_response.choices[0].message.content = msg_content
     mock_response.choices[0].finish_reason = "stop"
-    mock_response.usage.total_tokens = mock_ollama_response["usage"]["total_tokens"]
+    usage_tokens = mock_ollama_response["usage"]["total_tokens"]
+    mock_response.usage.total_tokens = usage_tokens
 
     mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
@@ -133,17 +136,8 @@ def mock_openai_client(mock_ollama_response: dict) -> MagicMock:
 
 
 @pytest.fixture
-def event_loop() -> asyncio.AbstractEventLoop:
-    """Create an event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture
 async def mock_ollama_client(mock_config: RoxyConfig) -> AsyncGenerator:
     """Yield a mock OllamaClient for testing."""
-    from roxy.brain.llm_clients import OllamaClient
 
     # Create real client but with mocked HTTP
     client = OllamaClient(

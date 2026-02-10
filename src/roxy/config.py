@@ -2,6 +2,10 @@
 
 Loads configuration from .env files and YAML config files, merges them,
 and provides validated settings via pydantic models.
+
+Secrets can be stored in macOS Keychain for better security:
+  keyring set roxy zai_api_key "your-key-here"
+  keyring set roxy brave_search_api_key "your-key-here"
 """
 
 from __future__ import annotations
@@ -17,6 +21,42 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
+
+
+def _get_secret(keyring_service: str, keyring_username: str, env_var: str) -> str | None:
+    """Get a secret from macOS Keychain as fallback.
+
+    Checks environment variable first, then falls back to keyring.
+    This allows .env to be optional for sensitive values.
+
+    Args:
+        keyring_service: The keyring service name (e.g., "roxy")
+        keyring_username: The keyring username (e.g., "zai_api_key")
+        env_var: The environment variable name to check first
+
+    Returns:
+        The secret value, or None if not found in either location.
+    """
+    # Check environment variable first (takes precedence)
+    env_value = os.environ.get(env_var)
+    if env_value:
+        logger.debug(f"Loaded {env_var} from environment")
+        return env_value
+
+    # Fall back to keyring
+    try:
+        import keyring
+
+        secret = keyring.get_password(keyring_service, keyring_username)
+        if secret:
+            logger.debug(f"Loaded {keyring_username} from macOS Keychain")
+            return secret
+    except ImportError:
+        logger.debug("keyring not available, skipping keychain lookup")
+    except Exception as e:
+        logger.warning(f"Failed to get {keyring_username} from keyring: {e}")
+
+    return None
 
 
 class CloudProvider(str, Enum):
@@ -74,6 +114,16 @@ class CloudLLMConfig(BaseModel):
         if not 0.0 <= v <= 1.0:
             raise ValueError("confidence_threshold must be between 0.0 and 1.0")
         return v
+
+    def __repr__(self) -> str:
+        """Return a masked representation that hides sensitive data."""
+        # Mask API key in repr
+        masked_key = f"{self.api_key[:4]}...{self.api_key[-4:]}" if len(self.api_key) > 8 else "***"
+        return (
+            f"CloudLLMConfig(provider={self.provider}, model={self.model}, "
+            f"confidence_threshold={self.confidence_threshold}, api_key={masked_key}, "
+            f"base_url={self.base_url})"
+        )
 
     @model_validator(mode="after")
     def set_default_base_url(self) -> "CloudLLMConfig":
@@ -208,6 +258,38 @@ class RoxyConfig(BaseSettings):
     memory: MemoryConfig = Field(default_factory=MemoryConfig)
     voice: VoiceConfig = Field(default_factory=VoiceConfig)
 
+    # Optional: API keys (loaded from keychain if not in env)
+    zai_api_key: str = ""
+    brave_search_api_key: str = ""
+    openrouter_api_key: str = ""
+
+    @field_validator("zai_api_key", mode="before")
+    @classmethod
+    def load_zai_key_from_keychain(cls, v: str) -> str:
+        """Load ZAI API key from keychain if not set."""
+        if v:
+            return v
+        secret = _get_secret("roxy", "zai_api_key", "ZAI_API_KEY")
+        return secret or ""
+
+    @field_validator("brave_search_api_key", mode="before")
+    @classmethod
+    def load_brave_key_from_keychain(cls, v: str) -> str:
+        """Load Brave Search API key from keychain if not set."""
+        if v:
+            return v
+        secret = _get_secret("roxy", "brave_search_api_key", "BRAVE_SEARCH_API_KEY")
+        return secret or ""
+
+    @field_validator("openrouter_api_key", mode="before")
+    @classmethod
+    def load_openrouter_key_from_keychain(cls, v: str) -> str:
+        """Load OpenRouter API key from keychain if not set."""
+        if v:
+            return v
+        secret = _get_secret("roxy", "openrouter_api_key", "OPENROUTER_API_KEY")
+        return secret or ""
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
@@ -272,6 +354,12 @@ class RoxyConfig(BaseSettings):
 
         # Create config instance (pydantic-settings will load from .env)
         config = cls(**nested_data)
+
+        # Copy keychain-loaded secrets to cloud config
+        if config.zai_api_key and not config.llm_cloud.api_key:
+            config.llm_cloud.api_key = config.zai_api_key
+        elif config.openrouter_api_key and not config.llm_cloud.api_key:
+            config.llm_cloud.api_key = config.openrouter_api_key
 
         # Ensure data directory exists
         Path(config.data_dir).mkdir(parents=True, exist_ok=True)

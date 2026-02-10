@@ -147,7 +147,6 @@ class ShortcutsSkill(RoxySkill):
             return SkillResult(
                 success=True,
                 response_text=response,
-                response_text_for_speech=speech_response,
                 speak=True,
                 data={"shortcuts": shortcuts, "count": len(shortcuts)},
             )

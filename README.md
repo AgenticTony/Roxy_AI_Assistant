@@ -1,888 +1,550 @@
-<div align="center">
-
-  <!-- Title -->
-  <h1>
-    <img src="docs/images/roxy-logo.png" alt="Roxy Logo" width="120" height="120"><br>
-    Roxy
-  </h1>
-
-  <!-- Tagline -->
-  <p>
-    <em>Your privacy-first, voice-controlled AI assistant for macOS</em>
+<p align="center">
+  <h1 align="center">🎙️ Roxy</h1>
+  <p align="center"><strong>Privacy-first voice AI assistant for macOS</strong></p>
+  <p align="center">
+    Talk to your Mac. Control your apps. Search the web. Remember everything.<br>
+    All running locally on your hardware. No cloud required.
   </p>
-
-  <!-- Badges -->
-  <p>
-    <a href="https://pypi.org/project/roxy/">
-      <img src="https://img.shields.io/pypi/v/roxy?style=flat-square" alt="PyPI Version">
-    </a>
-    <a href="https://python.org">
-      <img src="https://img.shields.io/badge/python-3.12+-blue.svg?style=flat-square" alt="Python Version">
-    </a>
-    <a href="https://github.com/anthonyforan/roxy/actions">
-      <img src="https://img.shields.io/github/actions/workflow/status/anthonyforan/roxy/ci.yml?style=flat-square" alt="CI Status">
-    </a>
-    <a href="https://coveralls.io/github/anthonyforan/roxy">
-      <img src="https://img.shields.io/coveralls/github/anthonyforan/roxy?style=flat-square" alt="Coverage">
-    </a>
-    <a href="https://github.com/anthonyforan/roxy/blob/main/LICENSE">
-      <img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg?style=flat-square" alt="License: AGPL-3.0">
-    </a>
-    <a href="https://github.com/anthonyforan/roxy/stargazers">
-      <img src="https://img.shields.io/github/stars/anthonyforan/roxy?style=flat-square" alt="Stars">
-    </a>
-  </p>
-
-  <!-- Quick Links -->
-  <p>
-    <a href="#-features">Features</a> •
+  <p align="center">
     <a href="#-quick-start">Quick Start</a> •
-    <a href="#-documentation">Documentation</a> •
-    <a href="#-contributing">Contributing</a> •
-    <a href="#-license">License</a>
+    <a href="#-what-can-roxy-do">Features</a> •
+    <a href="#-architecture">Architecture</a> •
+    <a href="#-build-your-own-skill">Build a Skill</a> •
+    <a href="#-contributing">Contributing</a>
   </p>
-</div>
+  <p align="center">
+    <img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python 3.12+">
+    <img src="https://img.shields.io/badge/platform-macOS-lightgrey.svg" alt="macOS">
+    <img src="https://img.shields.io/badge/chip-Apple%20Silicon-orange.svg" alt="Apple Silicon">
+    <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="AGPL-3.0">
+    <img src="https://img.shields.io/badge/LLM-local--first-purple.svg" alt="Local-first">
+  </p>
+</p>
 
 ---
 
-## 📖 Table of Contents
+## Why Roxy?
 
-- [About](#-about)
-- [Features](#-features)
-- [Screenshots](#-screenshots)
-- [Prerequisites](#-prerequisites)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Usage](#-usage)
-- [Configuration](#-configuration)
-- [Development](#-development)
-- [Contributing](#-contributing)
-- [Documentation](#-documentation)
-- [Performance](#-performance)
-- [Troubleshooting](#-troubleshooting)
-- [FAQ](#-faq)
-- [Roadmap](#-roadmap)
-- [License](#-license)
-- [Acknowledgments](#-acknowledgments)
-- [Contact](#-contact)
+Every AI assistant sends your data to the cloud. Your emails, your calendar, your voice, your files — all shipped off to someone else's server.
+
+**Roxy doesn't.** She runs a language model directly on your Mac. 80% of requests never leave your machine. When she does need cloud help for complex reasoning, she strips out your personal information first and asks your permission.
+
+She's not a chatbot in a window. She's a **voice-controlled system assistant** that opens your apps, searches your files, reads your email, finds cheap flights, manages your calendar, remembers your conversations, and controls your desktop — all by voice.
+
+And she gets smarter the more you use her.
 
 ---
 
-## 🌟 About
-
-**Roxy** is a privacy-first, voice-controlled AI assistant designed specifically for macOS. Unlike other AI assistants that send everything to the cloud, Roxy processes **80%+ of requests locally** on your Mac using state-of-the-art local LLMs.
-
-### Why Roxy?
-
-- 🔒 **Privacy-First**: Your conversations, files, and data stay on your Mac
-- 🏠 **Local-First**: Fast responses without internet connectivity
-- 🎙️ **Voice-Native**: Designed for voice interaction from the ground up
-- 🔌 **Extensible**: Plugin-based skill system to add custom capabilities
-- 🧠 **Smart**: Three-tier memory system that learns about you over time
-- 🍎 **macOS Native**: Deep integration with macOS APIs and features
-
-### Who is Roxy For?
-
-- **Privacy-conscious users** who want AI assistance without data collection
-- **Developers** who want a customizable, local AI assistant
-- **macOS power users** looking for voice automation
-- **Researchers** interested in local LLM applications
-
----
-
-## ✨ Features
-
-<table>
-<tr>
-<td width="50%">
-
-### 🏠 Local-First Processing
-- 80%+ of requests processed on-device
-- Uses Ollama with Qwen3 8B for fast, private responses
-- Works completely offline
-- No API fees for local processing
-
-</td>
-<td width="50%">
-
-### 🔊 Voice-Controlled
-- Wake word detection with OpenWakeWord
-- Speech-to-text with faster-whisper
-- Text-to-speech with Kokoro via MLX-Audio
-- Natural conversation flow
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 🎯 Skill-Based Architecture
-- Modular plugin system
-- 30+ built-in skills
-- Easy to create custom skills
-- Permission-based access control
-
-</td>
-<td width="50%">
-
-### 🔒 Privacy-Gated Cloud
-- PII detection and redaction
-- User consent before cloud usage
-- Audit logging of all cloud requests
-- Configurable privacy modes
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 🧠 Smart Memory
-- Session context tracking
-- Semantic conversation history search
-- Long-term fact storage with Mem0
-- Learns your preferences
-
-</td>
-<td width="50%">
-
-### 🖥️ macOS Integration
-- Launch applications
-- Search files with Spotlight
-- Window management
-- System information
-- AppleScript execution
-
-</td>
-</tr>
-</table>
-
----
-
-## 🖼️ Screenshots
-
-<div align="center">
-  <img src="docs/images/roxy-repl.png" alt="Roxy REPL" width="800">
-  <p><em>Text mode REPL with syntax highlighting</em></p>
-</div>
-
-<div align="center">
-  <img src="docs/images/roxy-voice.png" alt="Roxy Voice Mode" width="800">
-  <p><em>Voice mode with wake word detection</em></p>
-</div>
-
----
-
-## 📋 Prerequisites
-
-### Required
-
-| Requirement | Minimum | Recommended |
-|-------------|---------|-------------|
-| macOS Version | 13.0 (Ventura) | 14.0 (Sonoma) or later |
-| Hardware | Intel Mac | Apple Silicon M1+ |
-| RAM | 8GB | 16GB+ |
-| Python | 3.12 | 3.12+ |
-| Disk Space | 20GB | 30GB+ |
-
-### Optional
-
-- **Docker**: For SearXNG local search
-- **Talon Voice**: For advanced voice commands
-- **Hammerspoon**: For window management
-- **API Keys**: For cloud LLM fallback and web search
-
----
-
-## 🚀 Installation
-
-### Option 1: Automated Installation (Recommended)
+## 🚀 Quick Start
 
 ```bash
-# Clone the repository
+# Clone and install
 git clone https://github.com/anthonyforan/roxy.git
 cd roxy
-
-# Run the installer
 bash scripts/install.sh
-```
 
-The installer will:
-✓ Check prerequisites (macOS, Python, uv)
-✓ Install Ollama and required models
-✓ Set up Python environment
-✓ Configure environment variables
-✓ Prompt for optional API keys
-✓ Set up optional components (SearXNG, Talon)
-
-### Option 2: Manual Installation
-
-<details>
-<summary>Click to expand manual installation steps</summary>
-
-#### Step 1: Install Dependencies
-
-```bash
-# Install Homebrew (if not installed)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install Ollama
-brew install ollama
-
-# Install uv (Python package manager)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install Python 3.12+
-brew install python@3.12
-```
-
-#### Step 2: Set Up Ollama Models
-
-```bash
-# Start Ollama
-ollama serve &
-
-# Pull required models
-ollama pull qwen3:8b
-ollama pull qwen3:0.6b
-ollama pull nomic-embed-text
-```
-
-#### Step 3: Install Roxy
-
-```bash
-# Clone the repository
-git clone https://github.com/anthonyforan/roxy.git
-cd roxy
-
-# Install Python dependencies
-uv sync
-
-# Install Playwright browsers
-uv run playwright install chromium
-```
-
-#### Step 4: Configure Environment
-
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your settings
-# Add API keys for cloud LLM (optional) and web search (optional)
-```
-
-</details>
-
-### Option 3: Docker Installation
-
-<details>
-<summary>Click to expand Docker installation</summary>
-
-```bash
-# Build Docker image
-docker build -t roxy .
-
-# Run Roxy container
-docker run -it --rm \
-  -v ~/roxy/data:/app/data \
-  --device /dev/snd \
-  roxy
-```
-</details>
-
----
-
-## ⚡ Quick Start
-
-### Starting Roxy
-
-```bash
-# Text mode (interactive REPL)
-uv run roxy
-
-# Voice mode (wake word + speech I/O)
+# Start talking
 uv run roxy --voice
-
-# Server mode (background service with menu bar)
-uv run roxy --server
-
-# Enable verbose logging
-uv run roxy --verbose
-
-# Override cloud consent mode
-uv run roxy --cloud never
 ```
 
-### First Steps
+Or start in text mode first:
 
-Once Roxy starts, try these commands:
-
+```bash
+uv run roxy
 ```
-# Voice commands (say these aloud)
-"Hey Roxy, open Safari"
-"Hey Roxy, what time is it?"
-"Hey Roxy, search for Python tutorials"
 
-# REPL commands (type these)
-/help          # Show all commands
-/stats         # Show performance statistics
-/config        # Show configuration
-/memory        # Search memories
-/quit          # Exit
-```
+**Requirements:** macOS 13+ (Ventura), Apple Silicon (M1/M2/M3/M4), 16GB+ RAM, Python 3.12+
 
 ---
 
-## 📖 Usage
+## 🎤 What Can Roxy Do?
 
-### Voice Commands
+### Control Your Mac
 
-Roxy responds to natural voice commands. Here are some examples:
+| Say this | Roxy does this |
+|----------|----------------|
+| "Hey Roxy, open Cursor" | Launches the app |
+| "Coding layout" | Arranges windows via Hammerspoon |
+| "Find the PDF about taxes" | Spotlight search → opens the file |
+| "What's running?" | Lists active apps, CPU, disk, battery |
+| "Run my morning shortcut" | Triggers macOS Shortcuts |
+| "Copy that" | Manages clipboard with history |
 
-| Command | Action | Skill |
-|---------|--------|-------|
-| "Hey Roxy, open Safari" | Launch an application | AppLauncherSkill |
-| "Hey Roxy, search for AI news" | Search the web | WebSearchSkill |
-| "Hey Roxy, find files about my project" | Search local files | FileSearchSkill |
-| "Hey Roxy, what's running?" | Show system processes | SystemInfoSkill |
-| "Hey Roxy, set up coding layout" | Arrange windows | WindowManagerSkill |
-| "Hey Roxy, remember I like dark mode" | Store preference | MemorySkill |
-| "Hey Roxy, what's my email address?" | Recall from memory | MemorySkill |
-| "Hey Roxy, create a note" | Create a note | NotesSkill |
-| "Hey Roxy, check my calendar" | Show calendar events | CalendarSkill |
+### Search & Browse
 
-### REPL Commands
+| Say this | Roxy does this |
+|----------|----------------|
+| "Search for AI news" | Brave Search (private) → summarises results |
+| "Find flights to London" | Searches, compares, returns top 5 with prices |
+| "Read that article" | Headless browser → extracts → summarises locally |
 
-| Command | Description |
-|---------|-------------|
-| `/help` | Show all available commands |
-| `/stats` | Display routing and usage statistics |
-| `/config` | Show current configuration |
-| `/memory [query]` | Search and display memories |
-| `/quit` or `/exit` | Exit the REPL |
+### Manage Your Day
 
-### Creating Custom Skills
+| Say this | Roxy does this |
+|----------|----------------|
+| "What's on my calendar?" | Reads today's events from Calendar.app |
+| "Any new emails?" | Checks Mail.app, summarises unread |
+| "Create a note about the meeting" | Creates in Notes.app |
+| "Remind me to call Maria at 3" | Sets reminder in Reminders.app |
+
+### Remember Things
+
+| Say this | Roxy does this |
+|----------|----------------|
+| "Remember my dog's name is Bella" | Stores in long-term memory |
+| "What's my dog's name?" | Recalls from memory: "Bella" |
+| "What did we talk about yesterday?" | Searches conversation history |
+
+### Developer Tools
+
+| Say this | Roxy does this |
+|----------|----------------|
+| "Git status" | Runs git commands in your project |
+| "Start development" | Opens IDE + terminal + Claude Code |
+| "Generate a commit message" | Analyses your diff, suggests message |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      VOICE LAYER                            │
+│  OpenWakeWord/Porcupine → whisper.cpp STT → Kokoro TTS     │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                    BRAIN (Orchestrator)                      │
+│  Agno framework → Intent classification → Skill dispatch    │
+│  Confidence-based routing: local (80%) vs cloud (20%)       │
+│  Privacy gateway: PII redaction before any cloud call       │
+└──┬──────────┬────────────┬──────────────┬───────────────────┘
+   │          │            │              │
+┌──▼──┐  ┌───▼────┐  ┌────▼─────┐  ┌────▼────┐
+│Mem  │  │Skills  │  │ Web     │  │ macOS  │
+│3-tier│  │16 built│  │ Access  │  │ Hooks  │
+│memory│  │-in     │  │ Private │  │ Deep   │
+└─────┘  └────────┘  └──────────┘  └────────┘
+```
+
+### Local-First, Cloud-When-Needed
+
+Roxy uses **confidence-based routing**. Every request goes to the local LLM first (Qwen3 8B via Ollama). If the local model is confident in its response, that's what you get — instant, private, free.
+
+If confidence is low, Roxy can escalate to a cloud LLM. But first:
+
+1. The **privacy gateway** scans for personal information (emails, phone numbers, names, addresses, ID numbers)
+2. Detected PII is **replaced with placeholders** before the request leaves your machine
+3. Depending on your settings, Roxy either **asks permission** or handles it automatically
+4. All cloud requests are **logged** so you can audit exactly what was sent
+
+You control the behaviour:
+
+```yaml
+# config/default.yaml
+privacy:
+  cloud_consent: "ask"    # ask | always | never
+```
+
+Set it to `never` and Roxy runs 100% offline.
+
+### Three-Tier Memory
+
+Roxy remembers things across conversations:
+
+- **Session memory** — current conversation context (in-memory)
+- **Conversation history** — past conversations with semantic search (SQLite + sqlite-vec)
+- **Long-term memory** — persistent facts about you, extracted automatically via Mem0 (ChromaDB)
+
+Ask her something you told her last week — she'll remember.
+
+### Skill Plugin System
+
+Every capability is a **Skill** — a Python class with declared permissions, trigger phrases, and an `execute()` method. Adding a new capability is one file:
 
 ```python
-from roxy.skills.base import RoxySkill, SkillContext, SkillResult, Permission
-
-class MyCustomSkill(RoxySkill):
-    """A custom skill for my specific need."""
-
-    name = "my_custom_skill"
-    description = "Does something specific"
-    triggers = ["do my thing", "custom action"]
+class WeatherSkill(RoxySkill):
+    name = "weather"
+    description = "Get current weather for a location"
+    triggers = ["weather in", "what's the weather", "is it raining"]
     permissions = [Permission.NETWORK]
 
     async def execute(self, context: SkillContext) -> SkillResult:
-        # Your skill logic here
-        result = await self._do_work(context)
-
-        return SkillResult(
-            success=True,
-            response_text=f"Completed: {result}",
-        )
+        # Your implementation here
+        return SkillResult(success=True, response_text="It's 3°C in Malmö")
 ```
 
-See [docs/skills-guide.md](docs/skills-guide.md) for detailed skill development guide.
+Drop it in `src/roxy/skills/`, restart Roxy, and she can do it.
 
 ---
 
-## ⚙️ Configuration
+## 📦 Tech Stack
 
-### Environment Variables
+| Component | Tool | Why |
+|-----------|------|-----|
+| Local LLM | [Ollama](https://ollama.com) + Qwen3 8B | Fast inference on Apple Silicon, function calling support |
+| Agent Framework | [Agno](https://github.com/agno-agi/agno) | Model-agnostic, 5000× faster instantiation than LangGraph |
+| Memory | [Mem0](https://github.com/mem0ai/mem0) + ChromaDB + SQLite | Three-tier: session → history → long-term |
+| Voice (STT) | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) | Real-time transcription with Metal acceleration |
+| Voice (TTS) | [Kokoro](https://github.com/lucasnewman/mlx-audio) via MLX-Audio | Natural speech, <300ms generation |
+| Wake Word | Porcupine / OpenWakeWord / Whisper fallback | Three backends, auto-selects best available |
+| Web Search | [Brave Search API](https://brave.com/search/api/) | Private, no tracking, 2000 free queries/month |
+| Browser | [Browser-Use](https://github.com/browser-use/browser-use) | AI-native browsing for flight search, form filling |
+| macOS | [PyObjC](https://pyobjc.readthedocs.io/) + AppleScript | Deep system integration — apps, windows, Spotlight |
+| MCP | [Model Context Protocol](https://modelcontextprotocol.io/) | Extensible tool integration, 5800+ available servers |
+| Menu Bar | [rumps](https://github.com/jaredks/rumps) | Native macOS menu bar presence |
+| Cloud LLM | [ChatGLM / Z.ai](https://z.ai) (optional) | Fallback for complex reasoning, PII-stripped |
 
-Create a `.env` file in the project root:
+**Monthly cost: $0** — everything runs locally. Cloud LLM is optional ($3–6/month if enabled).
 
-```bash
-# LLM Providers
-OLLAMA_HOST=http://localhost:11434
+---
 
-# Cloud LLM (optional - for complex queries)
-ZAI_API_KEY=your-zhipu-api-key
-ZAI_BASE_URL=https://api.z.ai/api/paas/v4
+## 🔧 Configuration
 
-# Web Search (optional)
-BRAVE_SEARCH_API_KEY=your-brave-key
+Roxy loads config from three sources (in priority order):
 
-# Privacy Settings
-ROXY_CLOUD_CONSENT_MODE=ask    # ask | always | never
-ROXY_PII_REDACTION=true
+1. **Environment variables** with `ROXY_` prefix
+2. **`.env` file** in the project root
+3. **`config/default.yaml`** for defaults
 
-# Voice Settings
-ROXY_WAKE_WORD=hey_roxy
-ROXY_TTS_VOICE=af_heart
-ROXY_TTS_SPEED=1.1
-
-# General Settings
-ROXY_LOG_LEVEL=INFO
-ROXY_DATA_DIR=$HOME/roxy/data
-```
-
-### Configuration File
-
-Edit `config/default.yaml` for advanced settings:
+Key settings:
 
 ```yaml
-roxy:
-  name: "Roxy"
-  version: "0.1.0"
-
+# Local LLM
 llm:
   local:
-    model: "qwen3:8b"
-    router_model: "qwen3:0.6b"
-    temperature: 0.7
-    max_tokens: 2048
-
+    model: "qwen3:8b"           # Your Ollama model
   cloud:
-    provider: "zai"              # zai | openrouter
-    model: "glm-4.7"
-    confidence_threshold: 0.7    # Below this → cloud
+    confidence_threshold: 0.7    # Below this → escalate to cloud
 
-memory:
-  session_max_messages: 50
-  history_db: "data/memory.db"
-  chromadb_path: "data/chromadb"
-  mem0_config:
-    llm_provider: "ollama"
-    llm_model: "qwen3:8b"
-
+# Voice
 voice:
-  stt_model: "base.en"          # whisper model size
-  tts_engine: "kokoro"
-  wake_word_sensitivity: 0.6
-  speak_responses: true
+  stt_model: "base.en"          # Whisper model size
+  wake_word:
+    sensitivity: 0.6            # 0.0-1.0, higher = more sensitive
 
+# Privacy
 privacy:
+  cloud_consent: "ask"          # ask | always | never
   redact_patterns:
     - email
     - phone
     - ssn
     - credit_card
-    - address
-  cloud_consent: "ask"           # ask | always | never
-  log_cloud_requests: true
 ```
+
+### API Keys (Optional)
+
+Store securely in macOS Keychain:
+
+```bash
+# Web search (free: https://brave.com/search/api/)
+uv run keyring set roxy brave_search_api_key "your-key"
+
+# Cloud LLM fallback (optional)
+uv run keyring set roxy zai_api_key "your-key"
+
+# Wake word — Porcupine (free: https://console.picovoice.ai)
+uv run keyring set roxy porcupine_access_key "your-key"
+```
+
+Or use a `.env` file if you prefer. Roxy works without any API keys — she just runs fully local.
 
 ---
 
-## 🛠️ Development
+## 🧩 Build Your Own Skill
 
-### Project Structure
+Creating a new skill takes about 5 minutes. Here's a complete example:
 
+```python
+"""Pomodoro timer skill for Roxy."""
+from __future__ import annotations
+
+import asyncio
+from roxy.skills.base import RoxySkill, SkillContext, SkillResult, Permission
+
+
+class PomodoroSkill(RoxySkill):
+    name = "pomodoro"
+    description = "Start a focus timer with Do Not Disturb"
+    triggers = [
+        "start a focus session",
+        "pomodoro",
+        "focus mode",
+        "start timer",
+    ]
+    permissions = [Permission.APPLESCRIPT, Permission.NOTIFICATIONS]
+
+    async def execute(self, context: SkillContext) -> SkillResult:
+        duration = context.parameters.get("minutes", 25)
+
+        # Turn on Do Not Disturb
+        from roxy.macos.applescript import AppleScriptRunner
+        runner = AppleScriptRunner()
+        await runner.run('do shell script "shortcuts run \\"Focus On\\""')
+
+        # Schedule the end notification
+        asyncio.get_event_loop().call_later(
+            duration * 60,
+            lambda: asyncio.ensure_future(self._timer_done(runner)),
+        )
+
+        return SkillResult(
+            success=True,
+            response_text=f"Focus mode on. I'll let you know in {duration} minutes.",
+        )
+
+    async def _timer_done(self, runner: AppleScriptRunner) -> None:
+        await runner.send_notification("Pomodoro Complete", "Time for a break!")
+        await runner.run('do shell script "shortcuts run \\"Focus Off\\""')
+
+    def can_handle(self, intent: str, parameters: dict) -> float:
+        focus_words = ["focus", "pomodoro", "timer", "concentrate"]
+        return 0.9 if any(w in intent.lower() for w in focus_words) else 0.0
 ```
-roxy/
-├── src/roxy/              # Source code
-│   ├── brain/            # Orchestrator, LLM clients, routing
-│   ├── skills/           # Skill system and implementations
-│   │   ├── system/       # macOS skills
-│   │   ├── web/          # Web search and browsing
-│   │   ├── productivity/ # Calendar, email, notes
-│   │   └── dev/          # Developer tools
-│   ├── voice/            # STT, TTS, wake word
-│   ├── memory/           # Three-tier memory system
-│   ├── macos/            # macOS integration
-│   └── mcp/              # MCP server management
-├── config/               # Configuration files
-├── scripts/              # Setup and utility scripts
-├── tests/                # Unit and integration tests
-│   ├── unit/
-│   ├── integration/
-│   └── benchmarks/
-├── docs/                 # Documentation
-├── talon/                # Talon Voice scripts
-└── data/                 # Local data (gitignored)
-```
 
-### Development Setup
+Save it to `src/roxy/skills/productivity/pomodoro.py`, restart Roxy, and say "Hey Roxy, start a focus session."
+
+For the full guide: **[docs/skills-guide.md](docs/skills-guide.md)**
+
+---
+
+## 🖥️ Running Roxy
+
+Three modes:
 
 ```bash
-# Clone the repository
-git clone https://github.com/anthonyforan/roxy.git
-cd roxy
+# Text mode — type commands in the terminal
+uv run roxy
 
-# Install development dependencies
-uv sync --dev
+# Voice mode — wake word activated, fully hands-free
+uv run roxy --voice
 
-# Install pre-commit hooks
-uv run pre-commit install
-
-# Run tests
-uv run pytest
-
-# Run with coverage
-uv run pytest --cov=roxy --cov-report=html
+# Server mode — background service with menu bar icon
+uv run roxy --server
 ```
 
-### Running Tests
+Additional commands:
 
 ```bash
-# Run all tests
-uv run pytest
-
-# Run specific test categories
-uv run pytest tests/unit/
-uv run pytest tests/integration/
-uv run pytest tests/benchmarks/
-
-# Run with verbose output
-uv run pytest -v
-
-# Run specific test file
-uv run pytest tests/integration/test_orchestrator_flow.py
-
-# Run with coverage report
-uv run pytest --cov=roxy --cov-report=html
-open htmlcov/index.html
+uv run roxy --health          # System health check
+uv run roxy --stats           # Performance analytics
+uv run roxy --verbose         # Debug logging
 ```
 
-### Code Quality
+### Auto-Start on Login
 
 ```bash
-# Format code
-uv run black src/ tests/
-
-# Check linting
-uv run ruff check src/ tests/
-
-# Type checking
-uv run mypy src/
-
-# Run pre-commit hooks manually
-uv run pre-commit run --all-files
+# Create LaunchAgent (starts Roxy when you log in)
+cp docs/com.roxy.assistant.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.roxy.assistant.plist
 ```
 
-### Building for Distribution
+### Uninstall
 
 ```bash
-# Build Python package
-uv build
-
-# Create distribution
-uv run pyinstaller roxy.spec
-
-# Notarize for macOS (requires Apple Developer account)
-codesign --deep --force --verify --verbose --sign "Developer ID Application: Your Name" dist/Roxy.app
+bash scripts/uninstall.sh
 ```
+
+Clean removal of everything — project files, data, models, LaunchAgent, Talon scripts. Offers a data backup before deleting. Asks before removing shared tools like Ollama.
+
+---
+
+## 🔒 Privacy Model
+
+Roxy was built with a simple principle: **your data is yours.**
+
+### What stays on your machine (always)
+
+- All voice recordings and transcriptions
+- Email and calendar content
+- Notes and reminders
+- File contents
+- Conversation history and memories
+- Passwords, API keys, tokens
+
+### What can leave your machine (with your permission)
+
+- Web search queries (via Brave Search — no tracking)
+- Complex LLM requests (PII-stripped, consent-gated)
+
+### What Roxy never does
+
+- Send data to any analytics service
+- Phone home to any server
+- Store data anywhere except your local drive
+- Share information between users (there's only one: you)
+
+Audit everything: `cat ~/roxy/data/cloud_requests.log`
+
+For the full privacy model: **[docs/privacy-model.md](docs/privacy-model.md)**
+
+---
+
+## 🧠 Self-Improvement (Roadmap)
+
+Roxy is designed to get smarter over time:
+
+- **Self-tuning** — adjusts confidence routing based on what works and what doesn't
+- **Self-healing** — detects broken components and auto-recovers
+- **Prompt optimisation** — rewrites her own system prompts based on real performance data
+- **Skill generation** — when she can't do something, she tries to write a skill for it
+- **Workflow composition** — detects repeated command sequences and suggests automations
+
+The evolution system builds on a feedback loop that tracks every interaction and infers success from your responses — no thumbs-up buttons needed.
+
+---
+
+## 📋 Project Structure
+
+```
+~/roxy/
+├── src/roxy/
+│   ├── brain/              # Orchestrator, router, privacy gateway, LLM clients
+│   ├── voice/              # Wake word, STT, TTS, voice pipeline
+│   ├── memory/             # Session, history (SQLite), long-term (Mem0)
+│   ├── skills/             # 16 built-in skills across 4 categories
+│   │   ├── system/         #   App launcher, file search, window manager, ...
+│   │   ├── web/            #   Web search, browser, flight search
+│   │   ├── productivity/   #   Calendar, email, notes, reminders
+│   │   └── dev/            #   Git ops, Claude Code integration
+│   ├── macos/              # AppleScript, PyObjC, Spotlight, Hammerspoon, menu bar
+│   └── mcp/                # MCP server manager + custom servers
+├── tests/                  # Unit, integration, security, benchmark tests
+├── config/                 # YAML configuration files
+├── talon/                  # Talon Voice command scripts
+├── docs/                   # Architecture, skills guide, privacy model
+└── scripts/                # Install, uninstall, setup scripts
+```
+
+**17,750 lines** of async, type-hinted Python with Google-style docstrings.
 
 ---
 
 ## 🤝 Contributing
 
-We love contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Roxy is open to contributions. The easiest way to start:
 
-### Quick Contribution Guide
+### Add a Skill
 
-1. **Fork** the repository
-2. **Clone** your fork: `git clone https://github.com/YOUR_USERNAME/roxy.git`
-3. **Create** a branch: `git checkout -b feature/your-feature-name`
-4. **Make** your changes
-5. **Test** thoroughly: `uv run pytest`
-6. **Commit** your changes: `git commit -m "Add your feature"`
-7. **Push** to your branch: `git push origin feature/your-feature-name`
-8. **Create** a Pull Request on GitHub
+1. Read **[docs/skills-guide.md](docs/skills-guide.md)**
+2. Create a new file in `src/roxy/skills/`
+3. Extend `RoxySkill`, implement `execute()` and `can_handle()`
+4. Add tests in `tests/unit/`
+5. Submit a PR
 
-### Contribution Areas
+### Skill Ideas We'd Love
 
-We're looking for help with:
+- 🌤️ Weather (OpenWeatherMap or Open-Meteo)
+- 🎵 Spotify / Apple Music control
+- 🏠 Home Assistant / HomeKit integration
+- 🔐 1Password / Bitwarden lookup
+- 🌍 Translation (local model)
+- 📊 CSV / spreadsheet analysis
+- 📸 Screenshot + vision model ("what's on my screen?")
+- 📰 RSS feed monitoring
+- 💰 Expense tracking
+- ⏱️ Pomodoro / focus timer
 
-- 🎯 **New Skills**: Create skills for your favorite tools
-- 🐛 **Bug Fixes**: Help squash bugs
-- 📚 **Documentation**: Improve guides and docs
-- 🧪 **Tests**: Increase test coverage
-- 🌍 **Internationalization**: Add language support
-- 🎨 **UI/UX**: Improve the interface
+### Other Contributions
 
-### Coding Standards
+- **Bug reports** — file an issue with steps to reproduce
+- **Documentation** — improvements to guides, examples, translations
+- **MCP servers** — new integrations via Model Context Protocol
+- **Voice models** — better wake word models, TTS voices
+- **Performance** — profiling, optimisation, benchmarks
 
-- Use `black` for formatting
-- Follow PEP 8 style guide
-- Add type hints to all functions
-- Write docstrings for all public APIs
-- Add tests for new features
-- Keep commits atomic and well-described
-
----
-
-## 📚 Documentation
-
-- [Architecture](docs/architecture.md) - System design and architecture
-- [Skills Guide](docs/skills-guide.md) - Creating custom skills
-- [Privacy Model](docs/privacy-model.md) - Privacy and security
-- [Performance Guide](docs/performance.md) - Performance optimization
-
----
-
-## ⚡ Performance
-
-### Benchmarks
-
-| Operation | Target | Typical |
-|-----------|--------|---------|
-| Wake word detection | <200ms | ~150ms |
-| Intent classification | <500ms | ~300ms |
-| Local LLM response | <2s | ~1.2s |
-| Cloud LLM response | <5s | ~3.5s |
-| Memory search | <100ms | ~50ms |
-| Skill execution | <500ms | ~150ms |
-| End-to-end voice (local) | <4s | ~2.5s |
-
-### Optimization Tips
-
-1. **Use Apple Silicon** - M1/M2/M3 for best performance
-2. **Increase RAM** - 16GB+ recommended for smooth operation
-3. **Use SSD** - For faster memory and model loading
-4. **Close unnecessary apps** - To free up resources
-5. **Adjust model sizes** - Use smaller models for faster responses
-
----
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-#### "Ollama not responding"
+### Development Setup
 
 ```bash
-# Check if Ollama is running
-pgrep ollama
-
-# Start Ollama
-ollama serve
-
-# Check models are installed
-ollama list
+git clone https://github.com/anthonyforan/roxy.git
+cd roxy
+uv sync --all-extras
+uv run pre-commit install
+uv run pytest tests/ -v
 ```
-
-#### "Module not found" errors
-
-```bash
-# Reinstall dependencies
-uv sync --reinstall
-
-# Try installing in editable mode
-uv pip install -e .
-```
-
-#### Voice mode not working
-
-```bash
-# Check microphone permissions
-# System Settings > Privacy & Security > Microphone
-
-# Test microphone input
-uv run python -c "import pyaudio; p = pyaudio.PyAudio(); print('OK')"
-```
-
-#### Slow response times
-
-- Check Ollama is using GPU: `ollama show qwen3:8b`
-- Reduce model size: Use `qwen3:0.6b` for faster responses
-- Close other applications to free up RAM
-- Check CPU usage in Activity Monitor
-
-### Getting Help
-
-- 📖 Check the [documentation](docs/)
-- 🔍 [Search existing issues](https://github.com/anthonyforan/roxy/issues)
-- 💬 [Start a discussion](https://github.com/anthonyforan/roxy/discussions)
-- 🐛 [Report a bug](https://github.com/anthonyforan/roxy/issues/new?template=bug_report.md)
-- 💡 [Request a feature](https://github.com/anthonyforan/roxy/issues/new?template=feature_request.md)
-
----
-
-## ❓ FAQ
-
-<details>
-<summary><b>Is Roxy really free and open source?</b></summary>
-
-Yes! Roxy is licensed under the MIT License, which means it's completely free to use, modify, and distribute. The local LLMs run on your machine without any subscription or API fees.
-</details>
-
-<details>
-<summary><b>Do I need an internet connection?</b></summary>
-
-No! Roxy works completely offline for 80%+ of requests. An internet connection is only needed for:
-- Initial model download
-- Web search functionality
-- Cloud LLM fallback for complex queries
-- Optional features like flight search
-</details>
-
-<details>
-<summary><b>What data does Roxy send to the cloud?</b></summary>
-
-Roxy only sends data to the cloud when:
-1. You explicitly enable cloud mode, AND
-2. The request requires capabilities beyond local models, AND
-3. You give consent (if in "ask" mode)
-
-All cloud requests go through a privacy gateway that redacts PII (emails, phone numbers, addresses, etc.) before sending. You can review all cloud requests in `data/cloud_requests.log`.
-</details>
-
-<details>
-<summary><b>Can I use Roxy on an Intel Mac?</b></summary>
-
-Yes, but performance will be slower than on Apple Silicon. Intel Macs may take 2-3x longer for LLM responses. We recommend M1 or later for the best experience.
-</details>
-
-<details>
-<summary><b>How much RAM do I need?</b></summary>
-
-- **8GB**: Minimum, but may be slow
-- **16GB**: Recommended for smooth operation
-- **32GB+**: Optimal for larger models and multitasking
-</details>
-
-<details>
-<summary><b>Can I change the wake word?</b></summary>
-
-Yes! Edit the `ROXY_WAKE_WORD` environment variable in your `.env` file. You'll need to train a custom wake word model using OpenWakeWord.
-</details>
-
-<details>
-<summary><b>How do I uninstall Roxy?</b></summary>
-
-Run the uninstall script:
-```bash
-bash scripts/uninstall.sh
-```
-
-This will remove Roxy, its data, and optionally the Ollama models.
-</details>
 
 ---
 
 ## 🗺️ Roadmap
 
-### Version 0.2 (Current)
-- [x] Basic orchestrator and skill system
-- [x] Local LLM integration
-- [x] Three-tier memory system
-- [x] Privacy gateway
-- [x] macOS integration skills
-- [x] Web search and browsing
-- [x] Voice pipeline
-- [ ] Comprehensive testing
-- [ ] Documentation
+### v0.1 — Foundation ✅
+- [x] Local LLM via Ollama with confidence-based routing
+- [x] Voice pipeline: wake word → STT → TTS
+- [x] 16 built-in skills (system, web, productivity, dev)
+- [x] Three-tier memory (session → history → long-term)
+- [x] macOS deep integration (AppleScript, PyObjC, Spotlight, Shortcuts)
+- [x] Privacy gateway with PII redaction
+- [x] MCP server support
+- [x] Menu bar application
 
-### Version 0.3 (Next)
-- [ ] Productivity skills (calendar, email, notes)
-- [ ] Developer skills (git, project management)
-- [ ] Improved memory with better fact extraction
-- [ ] Multi-language support
-- [ ] Custom wake word training
-- [ ] Performance optimization
+### v0.2 — Evolution
+- [ ] Self-improvement system (feedback loop, self-tuning, self-healing)
+- [ ] Prompt self-optimisation
+- [ ] Workflow composition (detect and automate repeated patterns)
+- [ ] Document RAG (ingest your files, answer questions about them)
 
-### Version 0.4 (Future)
-- [ ] Multi-modal support (images, documents)
-- [ ] Custom model fine-tuning
-- [ ] Skill marketplace
-- [ ] Mobile app companion (iOS)
-- [ ] Distributed memory across devices
-- [ ] Advanced web automation
+### v0.3 — Perception
+- [ ] Vision (screenshot + local vision model)
+- [ ] Proactive scheduling (Roxy suggests actions based on your patterns)
+- [ ] MCP server auto-discovery
+- [ ] Multi-language voice support
+
+### Future
+- [ ] Skill auto-generation (Roxy writes her own skills)
+- [ ] Cross-device sync (encrypted, user-controlled)
+- [ ] Linux port
+
+---
+
+## ⚡ Performance
+
+Measured on M1 Pro, 16GB RAM:
+
+| Component | Target | Measured |
+|-----------|--------|----------|
+| Wake word detection | <200ms | ~150ms |
+| Intent classification | <500ms | ~300ms |
+| Local LLM response | <2s | ~1.2s |
+| Cloud LLM response | <5s | ~3.5s |
+| Memory search | <100ms | ~50ms |
+| TTS generation | <300ms | ~280ms |
+| **End-to-end voice → voice** | **<4s** | **~3.2s** |
+
+---
+
+## 📝 How Roxy Was Built
+
+Roxy was designed and built using **Claude Code Agent Teams** — an experimental feature that coordinates multiple AI agents working in parallel. The 17,750-line codebase was created across 5 build phases:
+
+| Phase | Mode | What Was Built |
+|-------|------|----------------|
+| 1 | Single session | Project structure, config, Ollama verification |
+| 2 | 2-agent team | Brain orchestrator + three-tier memory system |
+| 3 | 3-agent team | Voice pipeline + macOS integration + web skills |
+| 4 | Single session | Integration, testing, documentation, polish |
+| 5 | 3-agent team | Self-improvement system (evolution module) |
+
+The full architecture was designed in a single conversation, then executed by teams of specialised AI agents — each responsible for a distinct subsystem with defined interfaces and boundaries. The project demonstrates what's possible when AI agents are given clear specifications and allowed to work in parallel.
+
+---
+
+## 🙏 Acknowledgements
+
+Roxy is built on the shoulders of incredible open source projects:
+
+[Ollama](https://ollama.com) • [Agno](https://github.com/agno-agi/agno) • [Mem0](https://github.com/mem0ai/mem0) • [ChromaDB](https://github.com/chroma-core/chroma) • [faster-whisper](https://github.com/SYSTRAN/faster-whisper) • [MLX-Audio](https://github.com/lucasnewman/mlx-audio) • [Browser-Use](https://github.com/browser-use/browser-use) • [PyObjC](https://pyobjc.readthedocs.io/) • [Brave Search](https://brave.com/search/api/) • [Model Context Protocol](https://modelcontextprotocol.io/) • [rumps](https://github.com/jaredks/rumps) • [Hammerspoon](https://www.hammerspoon.org/)
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** - see the [LICENSE](LICENSE) file for details.
-
-### What AGPL-3.0 Means
-
-This is a **copyleft license** that ensures:
-
-- ✅ Freedom to use, modify, and distribute the software
-- ✅ Source code must be made available when the software is distributed
-- ✅ Modifications must be shared under the same license
-- ✅ **Network use provision**: If you run this software as a network service (SaaS, web API, etc.), you must provide source code to users
-
-### Why AGPL-3.0?
-
-The AGPL-3.0 license was chosen to:
-- Keep the software truly free and open source
-- Prevent companies from using Roxy in proprietary products without sharing improvements
-- Ensure that any SaaS/service offerings of Roxy contribute back to the community
-- Protect users' freedom to study, modify, and improve the software
-
-For more information about AGPL-3.0, visit: https://www.gnu.org/licenses/agpl-3.0.html
+AGPL-3.0. See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🙏 Acknowledgments
-
-Roxy wouldn't be possible without these amazing open source projects:
-
-### Core Technologies
-
-- [**Agno**](https://github.com/emmeth/agno) - Agent framework for orchestration
-- [**Ollama**](https://ollama.com) - Local LLM runtime
-- [**Qwen**](https://qwenlm.github.io/) - Local LLM models
-- [**Mem0**](https://mem0.ai) - Long-term memory system
-- [**ChromaDB**](https://www.trychroma.com/) - Vector database
-
-### Voice & Audio
-
-- [**OpenWakeWord**](https://github.com/dscripka/openWakeWord) - Wake word detection
-- [**faster-whisper**](https://github.com/SYSTRAN/faster-whisper) - Speech-to-text
-- [**Kokoro**](https://github.com/remsky/Kokoro-FastAPI) - Text-to-speech
-- [**MLX-Audio**](https://github.com/ml-explore/mlx-audio) - Audio processing on Apple Silicon
-
-### Web & Automation
-
-- [**Playwright**](https://playwright.dev) - Browser automation
-- [**Brave Search**](https://search.brave.com) - Privacy-focused search API
-- [**SearXNG**](https://searxng.org) - Local metasearch engine
-
-### macOS Integration
-
-- [**PyObjC**](https://pyobjc.readthedocs.io/) - Python to Objective-C bridge
-- [**rumps**](https://github.com/jaredks/rumps) - macOS menu bar
-- [**Hammerspoon**](https://www.hammerspoon.org/) - Window automation
-
-### Development Tools
-
-- [**uv**](https://github.com/astral-sh/uv) - Fast Python package manager
-- [**pytest**](https://pytest.org/) - Testing framework
-- [**Click**](https://click.palletsprojects.com/) - CLI framework
-- [**Rich**](https://rich.readthedocs.io/) - Terminal formatting
-
----
-
-## 💬 Contact & Community
-
-### Get Help
-
-- 📖 [Documentation](docs/)
-- 🐛 [Report Issues](https://github.com/anthonyforan/roxy/issues)
-- 💬 [Discussions](https://github.com/anthonyforan/roxy/discussions)
-- 📧 Email: [anthony@foran.io](mailto:anthony@foran.io)
-
-### Connect
-
-- **GitHub**: [@anthonyforan](https://github.com/anthonyforan)
-- **Location**: Malmö, Sweden
-- **Website**: [https://roxy.ai](https://roxy.ai) (coming soon)
-
-### Star History
-
-<a href="https://github.com/anthonyforan/roxy">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=anthonyforan/roxy&type=timeline&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=anthonyforan/roxy&type=timeline" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=anthonyforan/roxy&type=timeline" />
-  </picture>
-</a>
-
----
-
-<div align="center">
-
-**Built with ❤️ on macOS**
-
-*Your privacy-respecting AI companion*
-
-[⬆ Back to Top](#-roxy-)
-
-</div>
+<p align="center">
+  <strong>Built with 🎙️ by <a href="https://github.com/anthonyforan">Anthony Foran</a></strong><br>
+  <em>From casino floor manager to AI developer — Roxy is proof that career transitions<br>
+  don't have age limits and the best tools are the ones you build yourself.</em>
+</p>

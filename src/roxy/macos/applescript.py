@@ -54,9 +54,12 @@ def escape_applescript_string(s: str) -> str:
     injection attacks. This function handles:
     - Backslashes: \\
     - Double quotes: \\"
+    - Single quotes: \\' (in some contexts)
     - Line feeds: \\n
     - Carriage returns: \\r
     - Tab characters: \\t
+    - Null bytes: stripped (security risk)
+    - Backticks, semicolons, pipe characters: context-dependent
 
     The escaping order is important - backslashes must be escaped first
     to avoid double-escaping previously escaped characters.
@@ -75,15 +78,42 @@ def escape_applescript_string(s: str) -> str:
         >>> escape_applescript_string('line1\\nline2')
         'line1\\\\nline2'
     """
+    if not isinstance(s, str):
+        s = str(s)
+
+    # Strip null bytes (security risk)
+    s = s.replace('\x00', '')
+
     # Replace backslash first (to avoid double-escaping)
     s = s.replace("\\", "\\\\")
+
     # Then escape quotes
     s = s.replace('"', '\\"')
+    # Note: Single quotes generally don't need escaping in AppleScript strings
+    # but we escape backslash-singlequote for shell context safety
+    s = s.replace("'", "\\'")
+
     # Handle line breaks
     s = s.replace('\n', '\\n')
     s = s.replace('\r', '\\r')
+
     # Handle tabs
     s = s.replace('\t', '\\t')
+
+    # Handle other potentially dangerous characters in string context
+    # Percent sign can be used for variable interpolation
+    s = s.replace('%', '\\%')
+
+    # Dollar sign (variable interpolation)
+    s = s.replace('$', '\\$')
+
+    # Backtick (command substitution in shell)
+    s = s.replace('`', '\\`')
+
+    # Remove any remaining control characters except common whitespace
+    import re
+    s = re.sub(r'[\x01-\x08\x0b-\x0c\x0e-\x1f]', '', s)
+
     return s
 
 

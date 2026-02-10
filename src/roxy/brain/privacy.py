@@ -16,6 +16,43 @@ from typing import Literal
 logger = logging.getLogger(__name__)
 
 
+# PII Risk levels for classification
+class PIIRiskLevel(str, Enum):
+    """Risk levels for PII data types."""
+    LOW = "low"  # Publicly available or low sensitivity
+    MEDIUM = "medium"  # Semi-private, could be used for profiling
+    HIGH = "high"  # Sensitive personal information
+    CRITICAL = "critical"  # Financial, medical, or identity theft risk
+
+
+# Mapping of PII patterns to risk levels
+PII_RISK_LEVELS: dict[str, PIIRiskLevel] = {
+    "email": PIIRiskLevel.MEDIUM,
+    "phone_na": PIIRiskLevel.MEDIUM,
+    "phone_swedish": PIIRiskLevel.MEDIUM,
+    "phone_uk": PIIRiskLevel.MEDIUM,
+    "phone_intl": PIIRiskLevel.MEDIUM,
+    "ssn": PIIRiskLevel.CRITICAL,
+    "personnummer_swedish": PIIRiskLevel.CRITICAL,
+    "credit_card": PIIRiskLevel.CRITICAL,
+    "ip_address": PIIRiskLevel.MEDIUM,
+    "ipv6_address": PIIRiskLevel.MEDIUM,
+    "password": PIIRiskLevel.CRITICAL,
+    "pin": PIIRiskLevel.CRITICAL,
+    "account_number": PIIRiskLevel.HIGH,
+    "address": PIIRiskLevel.HIGH,
+    "url": PIIRiskLevel.LOW,
+    "mac_address": PIIRiskLevel.LOW,
+    "iban": PIIRiskLevel.HIGH,
+    "passport_us": PIIRiskLevel.CRITICAL,
+    "date_of_birth": PIIRiskLevel.HIGH,
+    "medical_id": PIIRiskLevel.CRITICAL,
+    "drivers_license": PIIRiskLevel.HIGH,
+    "api_key": PIIRiskLevel.CRITICAL,
+    "token": PIIRiskLevel.CRITICAL,
+}
+
+
 class ConsentMode(str, Enum):
     """User consent modes for cloud LLM access."""
     ASK = "ask"
@@ -32,9 +69,10 @@ class PIIMatch:
     start: int
     end: int
     placeholder: str
+    risk_level: PIIRiskLevel = PIIRiskLevel.MEDIUM
 
     def __str__(self) -> str:
-        return f"PIIMatch({self.pattern_name}, {self.placeholder})"
+        return f"PIIMatch({self.pattern_name}, {self.placeholder}, risk={self.risk_level.value})"
 
 
 @dataclass
@@ -67,15 +105,94 @@ class PrivacyGateway:
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
             re.IGNORECASE,
         ),
-        "phone": re.compile(
-            r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b",
+        # North American phone (US/Canada) - more permissive
+        "phone_na": re.compile(
+            r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}",
+        ),
+        # Swedish phone: +46 XX XXX XXXX or 0XX XXX XX XX or 0XX-XXX XX XX
+        "phone_swedish": re.compile(
+            r"(?:\+46|0)[\s-]?\d{1,3}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}",
+        ),
+        # UK phone: +44 XXXX XXXXXX or 0XXX XXX XXXX
+        "phone_uk": re.compile(
+            r"(?:\+44|0)[\s-]?\d{3,4}[\s-]?\d{3}[\s-]?\d{3,4}",
+        ),
+        # Generic international phone: +XX XXX XXX XXXX
+        "phone_intl": re.compile(
+            r"\+\d{1,4}[\s-]?\d{2,4}[\s-]?\d{2,4}[\s-]?\d{2,6}",
         ),
         "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+        # Swedish personnummer: YYMMDD-XXXX or YYYYMMDD-XXXX
+        "personnummer_swedish": re.compile(
+            r"\b(?:19|20)?\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[-]\d{4}\b",
+        ),
         "credit_card": re.compile(
             r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
         ),
         "ip_address": re.compile(
             r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b",
+        ),
+        # Contextual PII: password
+        "password": re.compile(
+            r"(?:password|passwd|pwd)[\s=:]+[^\s'\"]+",
+            re.IGNORECASE,
+        ),
+        # Contextual PII: PIN code
+        "pin": re.compile(
+            r"(?:pin|passcode)[\s=:]+\d{4,8}",
+            re.IGNORECASE,
+        ),
+        # Contextual PII: account number
+        "account_number": re.compile(
+            r"(?:account|acct|customer)[\s#]+(?:number|no|num)?[\s#:]*\d{6,}",
+            re.IGNORECASE,
+        ),
+        # Enhanced address pattern (international)
+        "address": re.compile(
+            r"\d+\s+[A-Z][a-z]+\s+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Way|Court|Ct|Place|Pl)[,\s]+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?[,\s]+[A-Z]{2}\s+\d{5}",
+            re.MULTILINE,
+        ),
+        # IPv6 address (simplified - covers common formats)
+        "ipv6_address": re.compile(
+            r"(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,7}|::1|::",
+        ),
+        # URL pattern (http/https)
+        "url": re.compile(
+            r"https?://(?:[-\w.]|(?:%[0-9a-fA-F]{2}))+[/\w .?=&%+-]*",
+        ),
+        # MAC address
+        "mac_address": re.compile(
+            r"(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}",
+        ),
+        # IBAN (International Bank Account Number) - simplified pattern
+        "iban": re.compile(
+            r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,35}\b",
+        ),
+        # US Passport number
+        "passport_us": re.compile(
+            r"\b\d{9}\b",  # Contextual - might need enhancement
+        ),
+        # Date of birth (ISO format: YYYY-MM-DD or similar)
+        "date_of_birth": re.compile(
+            r"\b(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])\b",
+        ),
+        # Medical ID / Health insurance number
+        "medical_id": re.compile(
+            r"(?:medical|health|insurance)[\s#]+(?:id|record|number|no|num)?[\s#:]*[A-Z0-9]{5,}",
+            re.IGNORECASE,
+        ),
+        # Driver's license (US format - state-specific patterns)
+        "drivers_license": re.compile(
+            r"(?:driver'?s?[\s-]*?license|dl)[\s#]*:?\s*[A-Z0-9]{6,15}",
+            re.IGNORECASE,
+        ),
+        # API key pattern (sk-, pk-, etc.)
+        "api_key": re.compile(
+            r"\b(sk|pk|ak|api)[_-]?[a-zA-Z0-9]{20,}\b",
+        ),
+        # JWT token
+        "token": re.compile(
+            r"eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+",
         ),
     }
 
@@ -139,24 +256,32 @@ class PrivacyGateway:
         self._placeholder_counter = 0
 
         for pattern_name in self._pattern_names:
-            if pattern_name not in self.PATTERNS:
+            # Handle backward compatibility aliases
+            actual_pattern_name = pattern_name
+            if pattern_name == "phone":
+                actual_pattern_name = "phone_na"  # Map old "phone" to "phone_na"
+
+            if actual_pattern_name not in self.PATTERNS:
                 logger.warning(f"Unknown PII pattern: {pattern_name}")
                 continue
 
-            pattern = self.PATTERNS[pattern_name]
+            pattern = self.PATTERNS[actual_pattern_name]
 
             for match in pattern.finditer(text):
                 original = match.group()
                 start = match.start() + offset
                 end = match.end() + offset
 
+                # For backward compatibility, use original pattern name in placeholder
                 placeholder = self._generate_placeholder(pattern_name)
+                risk_level = PII_RISK_LEVELS.get(actual_pattern_name, PIIRiskLevel.MEDIUM)
                 pii_match = PIIMatch(
-                    pattern_name=pattern_name,
+                    pattern_name=actual_pattern_name,
                     original=original,
                     start=start,
                     end=end,
                     placeholder=placeholder,
+                    risk_level=risk_level,
                 )
                 pii_matches.append(pii_match)
 
@@ -209,6 +334,7 @@ class PrivacyGateway:
         provider: str,
         model: str,
         response_summary: str,
+        pii_matches: list[PIIMatch] | None = None,
     ) -> None:
         """
         Log cloud request to file for audit.
@@ -219,6 +345,7 @@ class PrivacyGateway:
             provider: Cloud provider name.
             model: Model name used.
             response_summary: Summary of the response.
+            pii_matches: List of PII matches that were redacted.
         """
         try:
             timestamp = datetime.now().isoformat()
@@ -226,6 +353,9 @@ class PrivacyGateway:
             # Sanitize input for logging
             safe_prompt = redacted_prompt[:500]  # Limit length
             safe_response = response_summary[:500]  # Limit length
+
+            # Calculate PII risk summary
+            risk_summary = self._calculate_risk_summary(pii_matches) if pii_matches else {}
 
             log_entry = (
                 f"\n{'='*80}\n"
@@ -235,8 +365,15 @@ class PrivacyGateway:
                 f"Original Prompt: {original_prompt[:200]}...\n"
                 f"Redacted Prompt: {safe_prompt}\n"
                 f"Response: {safe_response}\n"
-                f"{'='*80}\n"
             )
+
+            # Add PII risk summary if available
+            if risk_summary:
+                log_entry += f"PII Risk Summary:\n"
+                for risk_level, count in risk_summary.items():
+                    log_entry += f"  - {risk_level}: {count} instances\n"
+
+            log_entry += f"{'='*80}\n"
 
             with self.log_path.open("a", encoding="utf-8") as f:
                 f.write(log_entry)
@@ -259,17 +396,20 @@ class PrivacyGateway:
         self._placeholder_counter += 1
         return f"[REDACTED_{pattern_name.upper()}_{self._placeholder_counter}]"
 
-    def add_pattern(self, name: str, pattern: str | re.Pattern) -> None:
+    def add_pattern(self, name: str, pattern: str | re.Pattern, activate: bool = True) -> None:
         """
         Add a custom PII pattern.
 
         Args:
             name: Name for the pattern.
             pattern: Regex pattern (string or compiled).
+            activate: Whether to immediately activate this pattern for redaction.
         """
         if isinstance(pattern, str):
             pattern = re.compile(pattern)
         self.PATTERNS[name] = pattern
+        if activate and name not in self._pattern_names:
+            self._pattern_names.append(name)
         logger.debug(f"Added custom PII pattern: {name}")
 
     def remove_pattern(self, name: str) -> None:
@@ -282,6 +422,55 @@ class PrivacyGateway:
         if name in self.PATTERNS:
             del self.PATTERNS[name]
             logger.debug(f"Removed PII pattern: {name}")
+
+    def _calculate_risk_summary(self, pii_matches: list[PIIMatch]) -> dict[str, int]:
+        """
+        Calculate a risk summary from PII matches.
+
+        Args:
+            pii_matches: List of PII matches.
+
+        Returns:
+            Dictionary mapping risk level to count.
+        """
+        risk_counts: dict[str, int] = {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
+        }
+
+        for match in pii_matches:
+            risk_level = match.risk_level.value
+            if risk_level in risk_counts:
+                risk_counts[risk_level] += 1
+
+        # Remove empty levels
+        return {k: v for k, v in risk_counts.items() if v > 0}
+
+    def get_max_risk_level(self, pii_matches: list[PIIMatch]) -> PIIRiskLevel:
+        """
+        Get the maximum risk level from a list of PII matches.
+
+        Args:
+            pii_matches: List of PII matches.
+
+        Returns:
+            The highest risk level found.
+        """
+        if not pii_matches:
+            return PIIRiskLevel.LOW
+
+        risk_order = [PIIRiskLevel.LOW, PIIRiskLevel.MEDIUM, PIIRiskLevel.HIGH, PIIRiskLevel.CRITICAL]
+        max_risk = PIIRiskLevel.LOW
+
+        for match in pii_matches:
+            current_index = risk_order.index(match.risk_level)
+            max_index = risk_order.index(max_risk)
+            if current_index > max_index:
+                max_risk = match.risk_level
+
+        return max_risk
 
     @classmethod
     def detect_address(cls, text: str) -> list[tuple[str, int, int]]:

@@ -33,6 +33,7 @@ from roxy.brain.protocols import (
     SkillRegistryProtocol,
 )
 from roxy.brain.factory import create_orchestrator, create_orchestrator_sync
+from roxy.brain.tool_adapter import SkillToolAdapter, IntentClassifier
 
 __all__ = [
     # LLM clients
@@ -56,6 +57,9 @@ __all__ = [
     # Orchestrator
     "RoxyOrchestrator",
     "OrchestratorConfig",
+    # Tool adapter for function calling
+    "SkillToolAdapter",
+    "IntentClassifier",
     # Protocols for DI
     "PrivacyGatewayProtocol",
     "LocalLLMClientProtocol",
