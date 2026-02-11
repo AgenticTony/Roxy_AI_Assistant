@@ -126,6 +126,7 @@ class RoxyOrchestrator:
         self.memory = memory or MemoryManager(
             config=config.memory,
             ollama_host=config.llm_local.host,
+            use_mem0=config.memory.use_mem0,
         )
 
         # Initialize tool adapter for function calling
@@ -187,18 +188,36 @@ class RoxyOrchestrator:
         """
         return f"""You are {self.config.name}, a privacy-first, local-first AI assistant for macOS.
 
-Your capabilities:
-- Answer questions using your knowledge
-- Help with tasks using available skills
-- Remember important information the user shares
-- Control macOS applications and system settings
-- Search the web when needed
+## IMPORTANT: You MUST use tools for actions
 
-Your principles:
+When the user asks you to DO something (open apps, search files, check system info, etc.), you MUST call the appropriate function/tool. Do NOT make up responses - use the available tools.
+
+Available tools:
+- app_launcher: Open applications by name
+- file_search: Search for files on your system
+- system_info: Get system information (processes, CPU, memory, etc.)
+- clipboard: Read or write to clipboard
+- shortcuts: Run macOS shortcuts
+- calendar: Check calendar events
+- email: Read emails
+- notes: Create/read notes
+- reminders: Manage reminders
+- git_ops: Git operations
+- claude_code: Launch Claude Code
+
+## When to use tools:
+- "open [app]" → call app_launcher
+- "search for [file]" → call file_search
+- "what's running" → call system_info
+- "check clipboard" → call clipboard
+- Any system action → use the appropriate tool
+
+## Your principles:
 - Privacy first: Never share user data without consent
 - Local first: Prefer local processing over cloud
 - Helpful and friendly: Be a capable assistant
 - Honest about limitations: If you can't do something, say so
+- ALWAYS use tools for actions - don't fake responses
 
 When responding:
 - Be concise but thorough
@@ -318,8 +337,9 @@ When responding:
             try:
                 # Agno's Agent.run() handles tool calling internally
                 response = await self.agent.arun(
-                    input=user_input,
-                    conversation_history=self.conversation_history.copy(),
+                    message=user_input,
+                    messages=messages,
+                    stream_intermediate_steps=True,
                 )
 
                 # Extract the response content

@@ -160,6 +160,7 @@ class MemoryConfig(BaseModel):
     mem0_llm_model: str = "qwen3:8b"
     mem0_embedder_provider: str = "ollama"
     mem0_embedder_model: str = "nomic-embed-text"
+    use_mem0: bool = True  # If False, use in-memory fallback (useful for testing)
 
     @field_validator("session_max_messages")
     @classmethod
@@ -178,6 +179,19 @@ class WakeWordConfig(BaseModel):
     sensitivity: float = 0.6
     porcupine_access_key: str = ""
     model_name: str = "hey_roxy"  # For OpenWakeWord backend
+
+    @model_validator(mode="after")
+    def load_porcupine_key_from_env(self) -> WakeWordConfig:
+        """Load Porcupine access key from environment if not set."""
+        if not self.porcupine_access_key:
+            # Try to load from .env file directly
+            try:
+                from dotenv import load_dotenv
+                load_dotenv(".env")
+                self.porcupine_access_key = os.environ.get("PORCUPINE_ACCESS_KEY", "")
+            except ImportError:
+                pass
+        return self
 
     @field_validator("backend")
     @classmethod

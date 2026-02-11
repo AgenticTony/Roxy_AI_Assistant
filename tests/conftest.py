@@ -11,7 +11,7 @@ import httpx
 import pytest
 
 from roxy.brain.llm_clients import OllamaClient
-from roxy.config import CloudLLMConfig, LocalLLMConfig, PrivacyConfig, RoxyConfig
+from roxy.config import CloudLLMConfig, LocalLLMConfig, MemoryConfig, PrivacyConfig, RoxyConfig
 
 
 @pytest.fixture
@@ -47,6 +47,11 @@ def mock_config(temp_dir: Path) -> RoxyConfig:
             cloud_consent="always",
             log_cloud_requests=True,
             pii_redaction_enabled=True,
+        ),
+        memory=MemoryConfig(
+            session_max_messages=10,
+            history_db=str(temp_dir / "data" / "test_memory.db"),
+            use_mem0=False,  # Use in-memory fallback for tests
         ),
     )
 
